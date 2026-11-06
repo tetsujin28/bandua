@@ -1,95 +1,71 @@
-# Bandua
+<p align="center">
+  <img src="src-tauri/icons/128x128.png" width="96" alt="Bandua logo">
+</p>
 
-**by Domingo Olmo Martin**
+<h1 align="center">Bandua</h1>
+<p align="center"><b>by Domingo Olmo Martin</b></p>
+<p align="center">
+  <b>English</b> · <a href="README.fr.md">Français</a> · <a href="README.es.md">Español</a>
+</p>
 
-Déchargement de rushes avec vérification par hash, pour Windows, macOS et Linux.
-Interface, log et rapport PDF en français, anglais et espagnol.
+Bandua offloads camera cards to several drives at once, checks every copy against the source with a hash, and writes a log, an MHL and a PDF report you can hand to the editor or the lab.
 
-Bandua est une divinité protectrice de l'ouest de la péninsule Ibérique : elle veille ici sur vos rushes.
+Free, for Windows, macOS and Linux. Interface and reports in English, French and Spanish.
 
-## Ce que fait la V1
+> Bandua is a protective deity of the western Iberian Peninsula. Here, it watches over your footage.
 
-- **Une seule lecture de la carte**, écrite en parallèle vers 1 à N destinations.
-- **Hash à la volée** (xxHash64 par défaut, XXH3, MD5 ou SHA-1).
-- **Vérification réelle** : chaque copie est relue depuis le disque et comparée au hash source.
-  Les fichiers sont écrits en `.bandua-part` et ne prennent leur vrai nom qu'une fois vérifiés.
-  En cas d'écart, le fichier est renommé `.HASH_ERREUR`.
-- **Dossier daté** dans chaque destination : `2026-11-06_1633_PROJET_J03_A_A003`.
-- **Copie à l'identique** de toute la carte (structure RED .RDM/.RDC, dossiers ARRI, BRAW + sidecar…),
-  sans les fichiers système (`.DS_Store`, `.Spotlight-V100`, `System Volume Information`…).
-- **Date de modification d'origine** conservée sur les copies.
-- **Contrôles préalables** : espace libre, destination à l'intérieur de la source.
-- **Rapports** dans chaque dossier daté :
-  - `…_rapport.pdf` : une ligne par clip (un .RDC RED, un dossier ARRIRAW, un .braw…)
-  - `…_log.txt` : chaque fichier avec son statut, son hash et sa taille
-  - `….mhl` : MHL 1.1, lisible par Silverstack, ShotPut, Hedge, YoYotta
-  - `….json` : tout le détail, pour des outils futurs
-- **Re-vérification** d'un dossier existant à partir de son MHL.
-- Signal sonore et bandeau vert ou rouge à la fin.
-- Interface, rapports et log en **français, anglais ou espagnol** (sélecteur FR / EN / ES).
-- Avertissement de non-responsabilité à accepter au premier lancement, rappelé dans « À propos » et en pied de chaque rapport.
+## Download
 
-## Structure
+Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and pick the file for your computer:
 
-```
-core/        moteur Rust (copie, hash, clips, rapports), sans interface
-  src/bin/cli.rs   outil en ligne de commande pour tester le moteur
-src-tauri/   application Tauri (fenêtre, sélection de dossiers, événements)
-ui/          interface HTML/CSS/JS, sans npm ni framework
-```
+| System | File |
+|---|---|
+| Windows (no install) | `Bandua_x.y.z_portable.exe` |
+| Windows (installer) | `Bandua_x.y.z_x64-setup.exe` or `.msi` |
+| macOS (Intel and Apple Silicon) | `Bandua_x.y.z_universal.dmg` |
+| Linux | `.AppImage` or `.deb` |
 
-`ui/index.html` s'ouvre aussi directement dans un navigateur : il passe alors en **mode démo**
-avec une carte RED simulée.
+**First launch.** The app is not signed yet, so your system will warn you once:
+- **Windows**: click "More info", then "Run anyway".
+- **macOS**: right-click the app, choose "Open", then confirm.
 
-## Compiler sur Windows (sans npm)
+## What it does
 
-1. Installer Rust : https://rustup.rs (choisir l'option par défaut, avec les Build Tools Visual Studio).
-2. WebView2 est déjà présent sur Windows 11.
-3. Installer la CLI Tauri (une seule fois) :
-   ```
-   cargo install tauri-cli --version "^2" --locked
-   ```
-4. Dans le dossier du projet :
-   ```
-   cd src-tauri
-   cargo tauri dev        # lancer en mode développement
-   cargo tauri build      # produire l'installeur (.msi et .exe dans target/release/bundle)
-   ```
+- **Reads the card once** and writes to 1, 2 or more destinations at the same time.
+- **Verifies every copy** by reading it back from the destination drive and comparing hashes (xxHash64 by default, XXH3, MD5 or SHA-1). A file only gets its final name once it is verified.
+- **Creates a dated folder** on each destination, such as `2026-11-06_1633_PROJECT_D03_A_A003`.
+- **Copies the card exactly as it is**: RED (.RDM / .RDC), ARRI (ARRIRAW, MXF, ProRes), Blackmagic (BRAW), Sony, Canon, GoPro, DJI… without system junk files.
+- **Recognises clips** to list them properly in the report (one RED .RDC folder = one clip).
+- **Writes 4 reports** in each dated folder: a PDF report, a text log, an MHL file (readable by Silverstack, ShotPut, Hedge…) and a JSON file.
+- **Re-verifies** an existing folder from its MHL, before you format a card or deliver a drive.
+- **Checks free space** and warns you before starting.
+- **"New offload" button** to chain cards: destinations and project info are kept.
 
-## macOS et Linux
+## How to use it
 
-Même procédure. Sur macOS, il faut les Xcode Command Line Tools (`xcode-select --install`).
-Sur Linux (Debian/Ubuntu) : `sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev`.
+1. Click **Source** and select the card.
+2. Add one or more **destinations**.
+3. Fill in the project, shoot day, camera and card (the card number is filled automatically from the clip names).
+4. Click **Start offload**.
+5. Wait for the green **CARD VERIFIED** banner before formatting the card.
 
-Sans Mac sous la main, le workflow GitHub Actions `.github/workflows/build.yml` compile les trois
-plateformes à chaque tag `v*` et dépose les installeurs dans les artefacts.
+## Build from source
 
-## Tester le moteur seul
+Requires [Rust](https://rustup.rs). No npm needed.
 
 ```
-cargo run -p bandua-core --release --bin bandua-cli -- E:\ D:\Rushes F:\Backup --project "Due Volti" --day J03 --camera A --card A003
-cargo run -p bandua-core --release --bin bandua-cli -- --verify D:\Rushes\2026-11-06_1633_...\2026-11-06_1633_....mhl
-cargo test -p bandua-core
+cargo install tauri-cli --version "^2" --locked
+cd src-tauri
+cargo tauri dev      # run
+cargo tauri build    # build installers
 ```
 
-## Limites connues de la V1
+Every published Release builds the Windows, macOS and Linux files automatically with GitHub Actions.
 
-- La relecture de vérification peut être servie en partie par le cache disque du système.
-  V2 : ouverture sans cache (`FILE_FLAG_NO_BUFFERING` sous Windows, `F_NOCACHE` sous macOS).
-- Pas encore de vignettes ni de métadonnées caméra dans le PDF (V3 : REDline, ARRI Reference Tool,
-  Blackmagic RAW SDK, ffmpeg).
-- Pas encore de file d'attente de cartes, de glisser-déposer, ni d'éjection automatique.
+Project layout: `core/` (copy, hash, reports engine, in Rust), `src-tauri/` (desktop app), `ui/` (interface, plain HTML/CSS/JS).
 
-## Feuille de route
+## License and disclaimer
 
-- **V2** : file d'attente, presets par production, détection de carte déjà déchargée,
-  lecture sans cache, ASC MHL v2, glisser-déposer, éjection, notifications (ntfy/Telegram),
-  
-- **V3** : vignettes et métadonnées dans le PDF (TC, ISO, WB, objectif), rapport de journée.
+© 2026 Domingo Olmo Martin. Released under the [MIT License](LICENSE).
 
-## Licence et avertissement
-
-© 2026 Domingo Olmo Martin. Distribué sous licence MIT (voir `LICENSE`).
-Le logiciel est fourni « en l'état », sans garantie. L'auteur n'est pas responsable
-des pertes de données ou dommages liés à son utilisation. Ne formatez jamais une
-carte avant d'avoir vérifié vos copies.
+Bandua is provided "as is", without any warranty. It helps you copy and verify media but does not replace your own checks and backup procedures. The author cannot be held responsible for any loss or corruption of data, or for any damage resulting from the use of the software. **Never format a card before checking that every copy is complete and readable.**
