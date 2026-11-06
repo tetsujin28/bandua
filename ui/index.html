@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bandua</title>
+<style>
+:root{
+  --bg:#0d0e10; --panel:#141619; --panel2:#1a1d21; --line:#252930; --line2:#30353d;
+  --text:#e7e9ec; --muted:#8a919b; --dim:#5d636c;
+  --accent:#f0a640; --accent-d:#c9852a; --ok:#35d39a; --err:#f0524f; --warn:#f5c451;
+  --mono:ui-monospace,"JetBrains Mono","SF Mono","Cascadia Mono",Consolas,monospace;
+  --sans:Inter,"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:13px/1.45 var(--sans);overflow:hidden;
+  -webkit-font-smoothing:antialiased;user-select:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,textarea,select{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);
+  border-radius:7px;padding:7px 9px;width:100%;outline:none;user-select:text}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:none;height:44px}
+.app{display:grid;grid-template-rows:52px 1fr 68px;height:100vh}
+
+/* barre haute */
+header{display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--line);background:#0b0c0e}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px;font-size:15px}
+.logo svg{display:block}
+.logo small{font-weight:500;font-size:11px;color:var(--dim);letter-spacing:0;margin-left:2px}
+.chip{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;padding:3px 9px;border-radius:20px;
+  background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.chip.run{color:var(--accent);border-color:#5a4220;background:#2a2012}
+.chip.ok{color:var(--ok);border-color:#1f5a44;background:#0f261d}
+.chip.err{color:var(--err);border-color:#5e2524;background:#2a1312}
+header .sp{flex:1}
+.hbtn{padding:6px 11px;border-radius:7px;border:1px solid var(--line);color:var(--muted);font-size:12px}
+.hbtn:hover{color:var(--text);border-color:var(--line2)}
+.algo{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
+.algo select{width:auto;padding:5px 8px}
+.lang{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.lang button{padding:5px 9px;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.5px}
+.lang button.on{background:var(--panel2);color:var(--accent)}
+.lang button:hover{color:var(--text)}
+.ibtn{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);color:var(--muted);font-weight:700;font-family:Georgia,serif;font-style:italic}
+.ibtn:hover{color:var(--accent);border-color:var(--accent)}
+/* fenêtres */
+.modal{position:fixed;inset:0;background:rgba(5,6,7,.78);backdrop-filter:blur(4px);display:grid;place-items:center;z-index:50;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.box{width:min(620px,92vw);max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:26px 28px;user-select:text}
+.box h2{font-size:22px;font-weight:800;display:flex;align-items:center;gap:12px}
+.box h4{font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin:20px 0 6px}
+.box p{color:#c3c8cf;font-size:12.5px;line-height:1.6;margin-bottom:8px}
+.box .by{color:var(--accent);font-weight:600;font-size:13px;margin-top:4px}
+.box .ver{color:var(--dim);font-family:var(--mono);font-size:11px}
+.box .warn{border-left:3px solid var(--accent);padding:10px 14px;background:#1d1912;border-radius:0 8px 8px 0}
+.box .acts{display:flex;justify-content:space-between;align-items:center;margin-top:22px;gap:12px}
+.box .go{height:40px}
+
+/* colonnes */
+main{display:grid;grid-template-columns:400px 1fr;min-height:0}
+.left{border-right:1px solid var(--line);overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.right{display:grid;grid-template-rows:auto 1fr 150px;min-height:0}
+h3{font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:center}
+h3 small{letter-spacing:0;text-transform:none;font-weight:500;color:var(--dim)}
+
+.src{border:1.5px dashed var(--line2);border-radius:10px;padding:14px;cursor:pointer;transition:.15s;background:var(--panel)}
+.src:hover{border-color:var(--accent)}
+.src.has{border-style:solid;border-color:var(--line)}
+.src .empty{color:var(--muted);text-align:center;padding:14px 0}
+.src .empty b{display:block;color:var(--text);font-size:14px;margin-bottom:3px}
+.path{font-family:var(--mono);font-size:12px;word-break:break-all;color:var(--text)}
+.brand{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.8px;padding:2px 7px;border-radius:4px;margin-right:6px;vertical-align:1px}
+.b-RED{background:#3a1416;color:#ff6b6b}.b-ARRI{background:#13283a;color:#6cb6ff}.b-Blackmagic{background:#2e2410;color:#f5b84a}
+.b-Sony,.b-Canon,.b-GoPro,.b-DJI,.b-Générique{background:#22262c;color:#aab1bb}
+.stats{display:flex;gap:16px;margin-top:10px;color:var(--muted);font-size:12px}
+.stats b{color:var(--text);font-family:var(--mono);font-weight:600}
+
+.dest{display:grid;grid-template-columns:22px 1fr 22px;gap:8px;align-items:center;padding:10px;background:var(--panel);
+  border:1px solid var(--line);border-radius:9px;margin-bottom:7px}
+.dest .n{width:22px;height:22px;border-radius:5px;background:var(--panel2);display:grid;place-items:center;font-size:11px;color:var(--muted);font-weight:700}
+.dest .x{color:var(--dim);font-size:16px}.dest .x:hover{color:var(--err)}
+.free{height:4px;border-radius:3px;background:var(--line);margin-top:6px;overflow:hidden;position:relative}
+.free span{position:absolute;inset:0 auto 0 0;background:var(--ok)}
+.free.low span{background:var(--err)}
+.freetxt{font-size:11px;color:var(--muted);margin-top:4px}
+.add{width:100%;padding:9px;border:1px dashed var(--line2);border-radius:9px;color:var(--muted)}
+.add:hover{color:var(--accent);border-color:var(--accent)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.fname{margin-top:10px;padding:9px 10px;border-radius:7px;background:#0a0b0c;border:1px solid var(--line);
+  font-family:var(--mono);font-size:11.5px;color:var(--accent);word-break:break-all}
+.fname em{display:block;font-style:normal;font-family:var(--sans);font-size:10px;color:var(--dim);letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+
+/* tableau de bord */
+.dash{padding:18px 22px 16px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center}
+.ring{width:150px;height:150px;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.ring .pct b{font-size:34px;font-weight:300;font-family:var(--mono);letter-spacing:-1px}
+.ring .pct small{display:block;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:-4px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.m{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.m span{font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+.m b{display:block;font-family:var(--mono);font-size:19px;font-weight:500;margin-top:2px}
+.cur{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px}
+.cur b{color:var(--text);font-weight:500}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:90px 1fr 46px;gap:10px;align-items:center;font-size:11px;color:var(--muted)}
+.track{height:6px;background:var(--line);border-radius:4px;overflow:hidden}
+.track span{display:block;height:100%;width:0;background:var(--accent);border-radius:4px;transition:width .15s linear}
+.track.v span{background:#6cb6ff}
+.bar em{font-style:normal;font-family:var(--mono);text-align:right;color:var(--text)}
+
+.clips{overflow:auto;min-height:0}
+table{width:100%;border-collapse:collapse}
+th{position:sticky;top:0;background:var(--bg);text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--dim);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--line);z-index:1}
+td{padding:8px 12px;border-bottom:1px solid #1b1e22;font-size:12.5px;vertical-align:middle}
+td.mono{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+td.name{font-weight:600}
+td.name small{display:block;font-weight:400;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+tr.active td{background:#1a1610}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.4px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line2)}
+.st.ok{color:var(--ok)}.st.ok .dot{background:var(--ok)}
+.st.err{color:var(--err)}.st.err .dot{background:var(--err)}
+.st.run{color:var(--accent)}.st.run .dot{background:var(--accent);animation:pulse 1s infinite}
+.st.wait{color:var(--dim)}
+@keyframes pulse{50%{opacity:.3}}
+.mini{width:70px;height:4px;background:var(--line);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
+.mini span{display:block;height:100%;background:var(--accent)}
+.placeholder{display:grid;place-items:center;height:100%;color:var(--dim);font-size:13px}
+
+.log{border-top:1px solid var(--line);background:#0a0b0c;font-family:var(--mono);font-size:11.5px;overflow:auto;padding:8px 14px;user-select:text}
+.log div{white-space:pre-wrap;color:var(--muted)}
+.log .t{color:var(--dim);margin-right:8px}
+.log .ok{color:var(--ok)}.log .error,.log .fatal{color:var(--err)}.log .info{color:var(--text)}
+
+/* barre basse */
+footer{display:flex;align-items:center;gap:12px;padding:0 18px;border-top:1px solid var(--line);background:#0b0c0e}
+footer .msg{flex:1;color:var(--muted);font-size:12px}
+.go{height:42px;padding:0 28px;border-radius:9px;background:var(--accent);color:#141005;font-weight:800;font-size:14px;letter-spacing:.3px}
+.go:hover{background:#ffb653}
+.go:disabled{background:var(--panel2);color:var(--dim);cursor:not-allowed}
+.go.stop{background:#3a1918;color:var(--err)}
+.sec{height:42px;padding:0 16px;border-radius:9px;border:1px solid var(--line2);font-weight:600}
+.sec:hover{border-color:var(--accent);color:var(--accent)}
+.hide{display:none!important}
+
+/* écran de fin */
+.banner{position:fixed;inset:auto 0 68px 400px;padding:14px 22px;display:flex;align-items:center;gap:14px;
+  font-weight:700;font-size:15px;animation:up .25s ease-out}
+.banner.ok{background:linear-gradient(90deg,#0f3a2a,#0f261d);color:var(--ok);border-top:1px solid #1f5a44}
+.banner.err{background:linear-gradient(90deg,#3d1615,#2a1312);color:var(--err);border-top:1px solid #5e2524}
+.banner span{font-weight:400;color:var(--text);font-size:13px}
+@keyframes up{from{transform:translateY(20px);opacity:0}}
+.demo{font-size:11px;color:var(--warn);background:#2a2410;border:1px solid #5a4a20;padding:4px 10px;border-radius:6px}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#2a2e35;border-radius:6px;border:2px solid var(--bg)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo"><svg width="24" height="24" viewBox="0 0 64 64"><defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a640"/><stop offset="1" stop-color="#e0663a"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#lg)"/><circle cx="32" cy="32" r="15.5" fill="none" stroke="#111" stroke-width="5"/><path d="M24.5 32.5l5.5 5.5 9.5-11" fill="none" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>Bandua<small>by Domingo Olmo Martin</small></div>
+    <span id="chip" class="chip" data-i18n="ready"></span>
+    <div class="sp"></div>
+    <div class="algo"><span data-i18n="verification"></span>
+      <select id="algo">
+        <option value="xxh64" data-i18n="algo_xxh64"></option>
+        <option value="xxh3" data-i18n="algo_xxh3"></option>
+        <option value="md5">MD5</option>
+        <option value="sha1">SHA-1</option>
+      </select>
+    </div>
+    <button class="hbtn" id="reverifyBtn" data-i18n="reverify_btn" data-i18n-title="reverify_title"></button>
+    <div class="lang" id="lang"><button data-l="fr">FR</button><button data-l="en">EN</button><button data-l="es">ES</button></div>
+    <button class="ibtn" id="aboutBtn" data-i18n-title="about">i</button>
+  </header>
+
+  <main>
+    <section class="left">
+      <div>
+        <h3><span data-i18n="source"></span> <small data-i18n="source_sub"></small></h3>
+        <div class="src" id="src"></div>
+      </div>
+
+      <div>
+        <h3><span data-i18n="destinations"></span> <small id="destCount"></small></h3>
+        <div id="dests"></div>
+        <button class="add" id="addDest" data-i18n="add_dest"></button>
+      </div>
+
+      <div>
+        <h3 data-i18n="identification"></h3>
+        <div class="grid2">
+          <div><label data-i18n="project"></label><input id="project" data-i18n-ph="project_ph"></div>
+          <div><label data-i18n="day"></label><input id="day" data-i18n-ph="day_ph"></div>
+          <div><label data-i18n="camera"></label><input id="camera" placeholder="A"></div>
+          <div><label data-i18n="card"></label><input id="card" placeholder="A001"></div>
+        </div>
+        <div style="margin-top:8px"><label data-i18n="operator"></label><input id="operator" data-i18n-ph="operator_ph"></div>
+        <div style="margin-top:8px"><label data-i18n="notes"></label><textarea id="notes" data-i18n-ph="notes_ph"></textarea></div>
+        <div class="fname"><em data-i18n="folder_created"></em><span id="fname"></span></div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="dash">
+        <div class="ring">
+          <svg width="150" height="150"><circle cx="75" cy="75" r="66" stroke="#252930" stroke-width="9" fill="none"/>
+            <circle id="ringArc" cx="75" cy="75" r="66" stroke="var(--accent)" stroke-width="9" fill="none" stroke-linecap="round"
+              stroke-dasharray="414.69" stroke-dashoffset="414.69" style="transition:stroke-dashoffset .2s linear,stroke .3s"/></svg>
+          <div class="pct"><div><b id="pct">0</b><small id="phase"></small></div></div>
+        </div>
+        <div>
+          <div class="metrics">
+            <div class="m"><span data-i18n="speed"></span><b id="speed">-</b></div>
+            <div class="m"><span data-i18n="remaining"></span><b id="eta">-</b></div>
+            <div class="m"><span data-i18n="elapsed"></span><b id="elapsed">-</b></div>
+            <div class="m"><span data-i18n="files"></span><b id="filesDone">-</b></div>
+          </div>
+          <div class="cur" id="cur"></div>
+          <div class="bars">
+            <div class="bar"><span data-i18n="copy"></span><div class="track"><span id="barCopy"></span></div><em id="pCopy">0 %</em></div>
+            <div class="bar"><span data-i18n="verification"></span><div class="track v"><span id="barVerify"></span></div><em id="pVerify">0 %</em></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="clips" id="clipsWrap"></div>
+      <div class="log" id="log"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="msg" id="footMsg"></div>
+    <button class="sec hide" id="openPdf" data-i18n="open_pdf"></button>
+    <button class="sec hide" id="reveal" data-i18n="reveal"></button>
+    <button class="go" id="go" disabled></button>
+  </footer>
+</div>
+<div id="banner"></div>
+<div id="modal"></div>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+[package]
+name = "bandua-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Domingo Olmo Martin"]
+license = "MIT"
+description = "Bandua, moteur de déchargement de rushes : copie multi-destinations, hash, vérification, log, MHL, PDF"
+
+[lib]
+name = "bandua_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bandua-cli"
+path = "src/bin/cli.rs"
+
+[dependencies]
+xxhash-rust = { version = "0.8", features = ["xxh64", "xxh3"] }
+md-5 = "0.10"
+sha1 = "0.10"
+walkdir = "2"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+filetime = "0.2"
+fs2 = "0.4"
