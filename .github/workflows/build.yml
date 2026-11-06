@@ -1,10 +1,15 @@
 name: build
 
-# Se lance à la main (onglet Actions > build > Run workflow) ou à chaque tag v*
+# Se lance :
+#  - à la publication d'une Release sur GitHub (les fichiers y sont alors attachés automatiquement)
+#  - à la main (onglet Actions > build > Run workflow) pour un simple test, sans Release
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -39,14 +44,26 @@ jobs:
         run: cargo tauri build ${{ matrix.args }}
       - name: Exe portable Windows
         if: runner.os == 'Windows'
-        run: copy target\release\bandua.exe Bandua-portable.exe
+        shell: bash
+        run: cp target/release/bandua.exe "Bandua_$(grep -m1 '^version' src-tauri/Cargo.toml | cut -d'"' -f2)_portable.exe"
       - uses: actions/upload-artifact@v4
         with:
           name: bandua-${{ runner.os }}
           path: |
-            Bandua-portable.exe
+            Bandua_*_portable.exe
             target/**/release/bundle/**/*.msi
             target/**/release/bundle/**/*.exe
+            target/**/release/bundle/**/*.dmg
+            target/**/release/bundle/**/*.AppImage
+            target/**/release/bundle/**/*.deb
+      - name: Attacher à la Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Bandua_*_portable.exe
+            target/**/release/bundle/**/*.msi
+            target/**/release/bundle/**/*-setup.exe
             target/**/release/bundle/**/*.dmg
             target/**/release/bundle/**/*.AppImage
             target/**/release/bundle/**/*.deb
