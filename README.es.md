@@ -14,6 +14,8 @@ Gratuito, para Windows, macOS y Linux. Interfaz e informes en español, inglés 
 
 > Bandua es una divinidad protectora del oeste de la península ibérica. Aquí, vela por tu material.
 
+<p align="center"><img src="docs/screenshots/offload_es.png" width="860" alt="Volcado en curso"></p>
+
 ## Descargar
 
 Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)** y elige el archivo para tu ordenador:
@@ -48,6 +50,15 @@ Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)**
 3. Rellena el proyecto, el día de rodaje, la cámara y la tarjeta (el número de tarjeta se rellena automáticamente a partir de los nombres de los clips).
 4. Haz clic en **Iniciar el volcado**.
 5. Espera al aviso verde **TARJETA VERIFICADA** antes de formatear la tarjeta.
+
+## Capturas de pantalla
+
+<table>
+  <tr>
+    <td width="62%"><img src="docs/screenshots/verified_es.png" alt="Tarjeta verificada"><br><sub>Tarjeta verificada</sub></td>
+    <td width="38%"><img src="docs/screenshots/report_es.png" alt="Informe PDF entregado al montador o al laboratorio"><br><sub>Informe PDF entregado al montador o al laboratorio</sub></td>
+  </tr>
+</table>
 
 ## Compilar desde el código fuente
 
