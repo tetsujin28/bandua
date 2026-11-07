@@ -14,6 +14,8 @@ Gratuit, pour Windows, macOS et Linux. Interface et rapports en français, angla
 
 > Bandua est une divinité protectrice de l'ouest de la péninsule Ibérique. Ici, elle veille sur vos rushes.
 
+<p align="center"><img src="docs/screenshots/offload_fr.png" width="860" alt="Déchargement en cours"></p>
+
 ## Télécharger
 
 Rendez-vous sur la **[page des Releases](https://github.com/tetsujin28/bandua/releases)** et choisissez le fichier pour votre ordinateur :
@@ -48,6 +50,15 @@ Rendez-vous sur la **[page des Releases](https://github.com/tetsujin28/bandua/re
 3. Renseignez le projet, le jour de tournage, la caméra et la carte (le numéro de carte se remplit automatiquement à partir des noms de clips).
 4. Cliquez sur **Lancer le déchargement**.
 5. Attendez le bandeau vert **CARTE VÉRIFIÉE** avant de formater la carte.
+
+## Captures d'écran
+
+<table>
+  <tr>
+    <td width="62%"><img src="docs/screenshots/verified_fr.png" alt="Carte vérifiée"><br><sub>Carte vérifiée</sub></td>
+    <td width="38%"><img src="docs/screenshots/report_fr.png" alt="Rapport PDF remis au monteur ou au labo"><br><sub>Rapport PDF remis au monteur ou au labo</sub></td>
+  </tr>
+</table>
 
 ## Compiler depuis les sources
 
