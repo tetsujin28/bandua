@@ -14,6 +14,8 @@ Free, for Windows, macOS and Linux. Interface and reports in English, French and
 
 > Bandua is a protective deity of the western Iberian Peninsula. Here, it watches over your footage.
 
+<p align="center"><img src="docs/screenshots/offload_en.png" width="860" alt="Offload in progress"></p>
+
 ## Download
 
 Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and pick the file for your computer:
@@ -48,6 +50,15 @@ Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and
 3. Fill in the project, shoot day, camera and card (the card number is filled automatically from the clip names).
 4. Click **Start offload**.
 5. Wait for the green **CARD VERIFIED** banner before formatting the card.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="62%"><img src="docs/screenshots/verified_en.png" alt="Card verified"><br><sub>Card verified</sub></td>
+    <td width="38%"><img src="docs/screenshots/report_en.png" alt="PDF report given to the editor or the lab"><br><sub>PDF report given to the editor or the lab</sub></td>
+  </tr>
+</table>
 
 ## Build from source
 
