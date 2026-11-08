@@ -51,8 +51,6 @@ Mon expérience du plateau me dit qu'une partie de ce que proposent les logiciel
 - Refaire les 9 captures d'écran avec la nouvelle identité.
 
 ### 6. Rapports pro (V0.4)
-- Métadonnées des clips dans le PDF (caméra, cadence, durée, timecode, ISO, balance des blancs, objectif) : ffmpeg pour MOV, MP4 et MXF, et les moteurs officiels RED, ARRI et Blackmagic s'ils sont installés chez l'utilisateur (leurs licences interdisent de les distribuer avec Bandua)
-- Pas de vignettes dans le PDF (décidé le 8 novembre 2026) : ffmpeg ne sait pas décoder les formats RAW (BRAW, R3D, ARRIRAW), il faudrait les moteurs propriétaires pour chacun, pour un bénéfice faible sur un rapport de déchargement
 - Mon logo et mes coordonnées sur le PDF
 - ASC MHL v2
 
@@ -82,7 +80,7 @@ Il me faudra une bio, une photo, l'adresse du site (GitHub Pages ou mon propre d
 
 ## Face à ShotPut Pro
 
-ShotPut Pro est bien plus mûr : vignettes et métadonnées, automatisation, presets, pause, contrôles de la source, ASC MHL v2, et surtout vingt ans de confiance des productions. Bandua a d'autres atouts : il est gratuit, open source, sans compte ni licence, traduit en français, et simple.
+ShotPut Pro est bien plus mûr : automatisation, presets, pause, contrôles de la source, ASC MHL v2, et surtout vingt ans de confiance des productions. Bandua a d'autres atouts : il est gratuit, open source, sans compte ni licence, traduit en français, et simple.
 
 Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Bandua devienne l'outil gratuit et sérieux des petites équipes, des courts métrages, des indépendants et des étudiants, qui copient encore trop souvent leurs cartes à la main sans aucune vérification.
 
