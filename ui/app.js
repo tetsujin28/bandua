@@ -2,7 +2,7 @@
 // Fonctionne dans l'app Tauri (window.__TAURI__) ou en mode démo dans un navigateur.
 "use strict";
 
-const VERSION = "0.1.0";
+let VERSION = "0.2.0"; // remplacé au démarrage par la version de l'application (tauri.conf.json)
 const $ = (id) => document.getElementById(id);
 const store = {
   get(k, d) { try { const v = localStorage.getItem("bandua." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -168,6 +168,8 @@ const S = {
 const FIELDS = ["project", "day", "camera", "card", "operator", "notes"];
 
 function init() {
+  // Version réelle de l'application (Tauri), pour l'affichage dans « À propos »
+  window.__TAURI__?.app?.getVersion?.().then((v) => { VERSION = v; S.modalFn?.(); }).catch(() => {});
   applyLang();
   if (api.demo) $("chip").insertAdjacentHTML("afterend", '<span class="demo" data-i18n="demo"></span>');
   FIELDS.forEach((f) => {
@@ -201,7 +203,7 @@ const LOGO = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 64 64"><defs><
 function showAbout(firstRun) {
   S.modalFn = () => showAbout(firstRun);
   $("modal").innerHTML = `<div class="modal"><div class="box">
-    <h2>${LOGO(42)}<div>${firstRun ? esc(t("welcome")) : "Bandua"}<div class="by">by Domingo Olmo Martin</div></div></h2>
+    <h2>${LOGO(42)}<div>${firstRun ? esc(t("welcome")) : "Bandua"}<span class="vtag">v${esc(VERSION)}</span><div class="by">by Domingo Olmo Martin</div></div></h2>
     <p style="margin-top:14px">${esc(t("about_desc"))}</p>
     <p style="color:var(--muted)">${esc(t("about_name"))}</p>
     <h4>${esc(t("disclaimer_title"))}</h4>
@@ -248,6 +250,7 @@ async function chooseSource() {
   try {
     S.info = await api.scan(p);
     S.srcState = "ok";
+    if (!S.running) $("filesDone").textContent = `0/${S.info.total_files}`;
   } catch (e) {
     S.info = null; S.source = null; S.srcState = "error"; S.srcError = String(e);
     renderSource(); refresh();
@@ -354,7 +357,8 @@ function setClip(k, state, frac = 0) {
 function resetDashboard() {
   $("pct").textContent = "0"; $("phase").textContent = t("waiting");
   $("ringArc").style.strokeDashoffset = 414.69; $("ringArc").style.stroke = "var(--accent)";
-  ["speed", "eta", "elapsed", "filesDone"].forEach((id) => ($(id).textContent = "-"));
+  ["speed", "eta", "elapsed"].forEach((id) => ($(id).textContent = "-"));
+  $("filesDone").textContent = S.info ? `0/${S.info.total_files}` : "-";
   ["barCopy", "barVerify"].forEach((id) => ($(id).style.width = "0"));
   ["pCopy", "pVerify"].forEach((id) => ($(id).textContent = "0 %"));
   $("cur").textContent = t("no_offload");
@@ -409,6 +413,7 @@ function onEvent(e) {
         completedBytes: 0, filesDone: 0, t0: now(), samples: [] });
       S.fileSizes = [];
       $("fname").textContent = e.folder_name;
+      $("filesDone").textContent = `0/${e.total_files}`;
       break;
     case "file": {
       S.curIndex = e.index; S.fileSizes[e.index] = e.size;

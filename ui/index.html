@@ -103,6 +103,9 @@ label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
 .ring .pct{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
 .ring .pct b{font-size:34px;font-weight:300;font-family:var(--mono);letter-spacing:-1px}
 .ring .pct small{display:block;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:-4px}
+.ring .pct small.lbl{font-size:8.5px;color:var(--dim);margin:0 0 2px}
+.ring .pct b i{font-style:normal;font-size:16px;color:var(--muted);margin-left:2px;letter-spacing:0}
+.box h2 .vtag{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent);border:1px solid var(--line2);border-radius:5px;padding:2px 7px;margin-left:8px;vertical-align:4px}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 .m{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
 .m span{font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
@@ -212,11 +215,11 @@ footer .msg{flex:1;color:var(--muted);font-size:12px}
 
     <section class="right">
       <div class="dash">
-        <div class="ring">
+        <div class="ring" data-i18n-title="ring_title">
           <svg width="150" height="150"><circle cx="75" cy="75" r="66" stroke="#252930" stroke-width="9" fill="none"/>
             <circle id="ringArc" cx="75" cy="75" r="66" stroke="var(--accent)" stroke-width="9" fill="none" stroke-linecap="round"
               stroke-dasharray="414.69" stroke-dashoffset="414.69" style="transition:stroke-dashoffset .2s linear,stroke .3s"/></svg>
-          <div class="pct"><div><b id="pct">0</b><small id="phase"></small></div></div>
+          <div class="pct"><div><small class="lbl" data-i18n="ring_label"></small><b><span id="pct">0</span><i>%</i></b><small id="phase"></small></div></div>
         </div>
         <div>
           <div class="metrics">
