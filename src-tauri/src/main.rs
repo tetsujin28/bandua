@@ -1,7 +1,7 @@
 // Masque la console sous Windows en version release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use bandua_core::{free_space, run, scan, verify_mhl, Event, Job, ScanInfo};
+use bandua_core::{free_space, reverify, run, scan, Event, Job, ScanInfo};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -54,11 +54,16 @@ fn disk_info(path: String) -> DiskInfo {
     DiskInfo { free: free_space(&PathBuf::from(&path)), path }
 }
 
-#[tauri::command]
-fn start_offload(app: AppHandle, state: State<AppState>, job: Job) -> Result<(), String> {
+/// Lance une tâche longue (déchargement ou re-vérification) dans un thread,
+/// une seule à la fois, annulable par `cancel_offload`. Les événements partent
+/// vers l'interface sous le nom « offload ».
+fn spawn_task<F>(app: AppHandle, state: State<AppState>, task: F) -> Result<(), String>
+where
+    F: FnOnce(&AtomicBool, &mut dyn FnMut(Event)) -> Result<(), String> + Send + 'static,
+{
     let mut guard = state.cancel.lock().unwrap();
     if guard.is_some() {
-        return Err("Un déchargement est déjà en cours".into());
+        return Err("Une opération est déjà en cours".into());
     }
     let flag = Arc::new(AtomicBool::new(false));
     *guard = Some(flag.clone());
@@ -66,7 +71,7 @@ fn start_offload(app: AppHandle, state: State<AppState>, job: Job) -> Result<(),
 
     std::thread::spawn(move || {
         let app2 = app.clone();
-        let res = run(&job, &flag, &mut |e: Event| {
+        let res = task(&flag, &mut |e: Event| {
             let _ = app2.emit("offload", &e);
         });
         if let Err(msg) = res {
@@ -80,17 +85,20 @@ fn start_offload(app: AppHandle, state: State<AppState>, job: Job) -> Result<(),
 }
 
 #[tauri::command]
+fn start_offload(app: AppHandle, state: State<AppState>, job: Job) -> Result<(), String> {
+    spawn_task(app, state, move |flag, emit| run(&job, flag, emit).map(|_| ()))
+}
+
+#[tauri::command]
+fn start_reverify(app: AppHandle, state: State<AppState>, path: String, lang: String) -> Result<(), String> {
+    spawn_task(app, state, move |flag, emit| reverify(&PathBuf::from(path), &lang, flag, emit).map(|_| ()))
+}
+
+#[tauri::command]
 fn cancel_offload(state: State<AppState>) {
     if let Some(f) = state.cancel.lock().unwrap().as_ref() {
         f.store(true, Ordering::Relaxed);
     }
-}
-
-#[tauri::command]
-async fn reverify(path: String) -> Result<(usize, Vec<String>), String> {
-    tauri::async_runtime::spawn_blocking(move || verify_mhl(&PathBuf::from(path), &AtomicBool::new(false)))
-        .await
-        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -115,7 +123,7 @@ fn main() {
             disk_info,
             start_offload,
             cancel_offload,
-            reverify,
+            start_reverify,
             open_path,
             reveal_path
         ])

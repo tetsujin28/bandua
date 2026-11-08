@@ -186,6 +186,37 @@ pub fn tr(lang: &str, key: &str) -> &'static str {
             "Warning: on at least one destination, the re-read could not bypass the system cache",
             "Atención: en al menos un destino, la relectura no pudo evitar la caché del sistema",
         ],
+        // re-vérification
+        "reading" => ["lecture", "read", "lectura"],
+        "err_missing" => ["fichier introuvable", "file not found", "archivo no encontrado"],
+        "err_hash_changed" => [
+            "hash différent du MHL : le fichier a changé ou s'est abîmé",
+            "hash differs from the MHL: the file has changed or is damaged",
+            "hash diferente del MHL: el archivo ha cambiado o está dañado",
+        ],
+        "err_mhl_empty" => ["Aucun fichier listé dans {p}", "No file listed in {p}", "Ningún archivo en {p}"],
+        "msg_reverify" => [
+            "Re-vérification de {p} : {n} fichiers, {size}",
+            "Re-verifying {p}: {n} files, {size}",
+            "Reverificando {p}: {n} archivos, {size}",
+        ],
+        "msg_reverify_ok" => [
+            "{n} fichiers re-vérifiés, tous identiques au MHL",
+            "{n} files re-verified, all identical to the MHL",
+            "{n} archivos reverificados, todos idénticos al MHL",
+        ],
+        "msg_reverify_err" => [
+            "Re-vérification terminée avec {n} erreur(s)",
+            "Re-verification finished with {n} error(s)",
+            "Reverificación terminada con {n} error(es)",
+        ],
+        "msg_reverify_cancelled" => ["Re-vérification annulée", "Re-verification cancelled", "Reverificación cancelada"],
+        "msg_extra" => [
+            "fichier absent du MHL, non vérifié : {p}",
+            "file not in the MHL, not verified: {p}",
+            "archivo ausente del MHL, no verificado: {p}",
+        ],
+        "msg_extra_more" => ["… et {n} autre(s)", "… and {n} more", "… y {n} más"],
         _ => ["?", "?", "?"],
     };
     row[l]

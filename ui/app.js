@@ -49,7 +49,7 @@ function applyLang() {
 function setLang(l) {
   LANG = l; store.set("lang", l); applyLang();
   // ré-afficher ce qui dépend de la langue
-  renderSource(); renderDests(); if (S.info) rebuildClipStates(); else renderClipsPlaceholder();
+  renderSource(); renderDests(); if (S.info || S.tableClips) rebuildClipStates(); else renderClipsPlaceholder();
   if (!S.running && !S.summary) resetDashboard();
   if (S.summary) finishTexts(S.summary);
   setChip(S.chipCls, S.chipKey);
@@ -70,7 +70,7 @@ function tauriBackend() {
     disk: (path) => invoke("disk_info", { path }),
     start: (job) => invoke("start_offload", { job }),
     cancel: () => invoke("cancel_offload"),
-    reverify: (path) => invoke("reverify", { path }),
+    reverify: (path) => invoke("start_reverify", { path, lang: LANG }),
     open: (path) => invoke("open_path", { path }),
     reveal: (path) => invoke("reveal_path", { path }),
     onEvent: (cb) => listen("offload", (e) => cb(e.payload)),
@@ -107,7 +107,35 @@ function demoBackend() {
     pickMhl: async () => "/Volumes/RAID_PROD/2026-11-05_1802_DUE_VOLTI_J02_A_A002/2026-11-05_1802_DUE_VOLTI_J02_A_A002.mhl",
     scan: async (path) => { const c = redCard(path); return { source: path, total_files: c.files.length, ...c }; },
     disk: async (path) => ({ path, free: freeMap[path] ?? 900_000_000_000 }),
-    reverify: async () => { await new Promise((r) => setTimeout(r, 900)); return [37, []]; },
+    // Démo : re-vérification d'un dossier RED, avec un fichier abîmé pour montrer l'alerte
+    reverify: async () => {
+      const info = redCard("/Volumes/RAID_PROD/A002"), files = info.files, total = info.total_bytes;
+      cancelled = false;
+      handler({ type: "reverify", info: { source: "/Volumes/RAID_PROD/2026-11-05_1802_DUE_VOLTI_J02_A_A002", total_files: files.length, ...info } });
+      handler({ type: "started", total_files: files.length, total_bytes: total, work_bytes: total, folder_name: "2026-11-05_1802_DUE_VOLTI_J02_A_A002" });
+      let i = 0, inFile = 0, done = 0, ok = 0; const errors = [], bad = 9;
+      handler({ type: "file", index: 0, rel: files[0].rel, size: files[0].size });
+      timer = setInterval(() => {
+        let budget = 1_400_000_000 * 0.08 * SCALE;
+        while (!cancelled && budget > 0 && i < files.length) {
+          const f = files[i], step = Math.min(f.size - inFile, budget);
+          inFile += step; done += step; budget -= step;
+          if (inFile >= f.size) {
+            const good = i !== bad, h = hex();
+            if (good) ok++; else { errors.push(f.rel); handler({ type: "log", level: "error", message: `${t("st_error")} ${f.rel} : ${t("demo_hash")}` }); }
+            handler({ type: "file_result", index: i, result: { rel: f.rel, size: f.size, source_hash: h, dests: [{ hash: good ? h : hex(), ok: good }], ok: good, error: good ? null : t("demo_hash"), uncached: true } });
+            i++; inFile = 0;
+            if (i < files.length) handler({ type: "file", index: i, rel: files[i].rel, size: files[i].size });
+          }
+        }
+        handler({ type: "progress", done, total, phase: "verify", file_index: Math.min(i, files.length - 1) });
+        if (cancelled || i >= files.length) {
+          clearInterval(timer);
+          handler({ type: "reverify_finished", report: { checked: i, total_files: files.length, files_ok: ok, missing: 0, mismatched: errors.length,
+            errors, extra: [], cancelled, ok: !cancelled && !errors.length } });
+        }
+      }, 80);
+    },
     open: async () => log("info", t("demo_open")),
     reveal: async () => log("info", t("demo_reveal")),
     onEvent: (cb) => { handler = cb; },
@@ -253,7 +281,7 @@ async function chooseSource() {
   store.set("lastSource", p);
   if (S.summary) resetView();
   if (S.dests.some((d) => d.path === p)) return log("error", t("already_dest"));
-  S.source = p; S.info = null; S.srcState = "loading"; renderSource();
+  S.source = p; S.info = null; S.rvReport = null; S.srcState = "loading"; renderSource();
   try {
     S.info = await api.scan(p);
     S.srcState = "ok";
@@ -323,7 +351,8 @@ function refresh() {
   $("go").disabled = !S.running && !ready && !lastOk();
   if (!S.cancelArmed) $("go").textContent = S.running ? t("cancel") : S.summary ? t(lastOk() ? "new_offload" : "retry") : t("start");
   $("go").classList.toggle("stop", S.running);
-  if (S.running) $("footMsg").textContent = t("f_running");
+  if (S.running) $("footMsg").textContent = t(S.mode === "reverify" ? "f_reverifying" : "f_running");
+  else if (S.rvReport) $("footMsg").textContent = rvMsg(S.rvReport);
   else if (!S.summary)
     $("footMsg").textContent = !S.info ? t("f_pick_src") : !S.dests.length ? t("f_add_dest")
       : lack ? t("f_low") : t("f_ready", { size: fmtBytes(need), n: S.dests.length, algo: $("algo").selectedOptions[0].text.split(" ")[0] });
@@ -333,8 +362,9 @@ function refresh() {
 
 function renderClipsPlaceholder() { if (!S.info) $("clipsWrap").innerHTML = `<div class="placeholder">${esc(t("clips_here"))}</div>`; }
 
-function buildClipTable(keepStates) {
-  const c = S.info.clips;
+function buildClipTable(keepStates, clips) {
+  const c = clips || (keepStates && S.tableClips) || S.info.clips;
+  S.tableClips = c;
   if (!keepStates) {
     S.fileToClip = [];
     c.forEach((cl, k) => cl.files.forEach((fi) => (S.fileToClip[fi] = k)));
@@ -353,11 +383,12 @@ function buildClipTable(keepStates) {
 }
 function rebuildClipStates() { buildClipTable(true); }
 
-function setClip(k, state, frac = 0) {
-  S.clipState[k] = [state, frac];
+function setClip(k, state, frac = 0, label) {
+  if (state === "err" && !label) label = S.clipState[k]?.[2] || "st_error";
+  S.clipState[k] = [state, frac, label];
   const el = $("cs" + k); if (!el) return;
   el.innerHTML = state === "ok" ? `<span class="st ok"><span class="dot"></span>${esc(t("st_verified"))}</span>`
-    : state === "err" ? `<span class="st err"><span class="dot"></span>${esc(t("st_error"))}</span>`
+    : state === "err" ? `<span class="st err"><span class="dot"></span>${esc(t(label))}</span>`
     : state === "run" ? `<span class="st run"><span class="dot"></span>${Math.round(frac * 100)} %</span><span class="mini"><span style="width:${frac * 100}%"></span></span>`
     : `<span class="st wait"><span class="dot"></span>${esc(t("pending"))}</span>`;
   $("clip" + k).classList.toggle("active", state === "run");
@@ -377,7 +408,7 @@ function resetDashboard() {
 
 // Remet l'écran à zéro pour la carte suivante (destinations et identification conservées)
 function resetView() {
-  S.summary = null; S.info = null; S.source = null; S.srcState = "empty";
+  S.summary = null; S.info = null; S.source = null; S.srcState = "empty"; S.tableClips = null; S.rvReport = null;
   $("banner").innerHTML = "";
   ["openPdf", "reveal"].forEach((b) => $(b).classList.add("hide"));
   $("card").value = ""; $("notes").value = "";
@@ -399,7 +430,7 @@ async function start() {
     source_reread: $("reread").checked,
     ...Object.fromEntries(FIELDS.map((f) => [f, $(f).value.trim()])),
   };
-  S.summary = null; $("banner").innerHTML = ""; renderDests();
+  S.summary = null; S.rvReport = null; $("banner").innerHTML = ""; renderDests();
   ["openPdf", "reveal"].forEach((b) => $(b).classList.add("hide"));
   buildClipTable();
   resetDashboard();
@@ -419,11 +450,15 @@ function cancel() {
 
 function onEvent(e) {
   switch (e.type) {
+    case "reverify":
+      S.rvInfo = e.info; buildClipTable(false, e.info.clips);
+      break;
+    case "reverify_finished": finishReverify(e.report); break;
     case "started":
       Object.assign(S, { work: e.work_bytes, totalBytes: e.total_bytes, totalFiles: e.total_files, n: e.work_bytes / e.total_bytes - 1 || 1,
         completedBytes: 0, filesDone: 0, t0: now(), samples: [] });
       S.fileSizes = [];
-      $("fname").textContent = e.folder_name;
+      if (S.mode === "reverify") S.n = 0; else $("fname").textContent = e.folder_name;
       $("filesDone").textContent = `0/${e.total_files}`;
       break;
     case "file": {
@@ -440,22 +475,23 @@ function onEvent(e) {
       S.completedBytes += r.size * (1 + S.n);
       const k = S.fileToClip[e.index];
       if (k != null) {
-        if (!r.ok) setClip(k, "err");
+        if (!r.ok) setClip(k, "err", 0, S.mode === "reverify" ? (r.dests.length ? "st_mismatch" : "st_missing") : "st_error");
         S.clipDone[k] += r.size;
-        const cl = S.info.clips[k];
+        const cl = S.tableClips[k];
         if (S.clipState[k][0] !== "err") setClip(k, cl.files.every((fi) => fi <= e.index) ? "ok" : "run", S.clipDone[k] / cl.bytes);
       }
       $("filesDone").textContent = `${S.filesDone}/${S.totalFiles}`;
       break;
     }
     case "log": log(e.level, e.message);
-      if (e.level === "fatal") { S.running = false; refresh(); setChip("err", "chip_error"); }
+      if (e.level === "fatal") { S.running = false; S.mode = null; refresh(); setChip("err", "chip_error"); }
       break;
     case "finished": finish(e.summary); break;
   }
 }
 
 function progress(e) {
+  if (S.mode === "reverify") return progressReverify(e);
   const tt = now();
   S.samples.push([tt, e.done]);
   while (S.samples.length > 2 && tt - S.samples[0][0] > 3) S.samples.shift();
@@ -484,8 +520,31 @@ function progress(e) {
   $("elapsed").textContent = fmtTime(tt - S.t0);
   const k = S.fileToClip[S.curIndex];
   if (k != null && S.clipState[k][0] === "run") {
-    const cl = S.info.clips[k];
+    const cl = S.tableClips[k];
     setClip(k, "run", Math.min(1, (S.clipDone[k] + Math.min(inFile / (1 + S.n), size)) / cl.bytes));
+  }
+}
+
+// Re-vérification : la copie est déjà faite (barre orange pleine), seule la vérification avance
+function progressReverify(e) {
+  const tt = now();
+  S.samples.push([tt, e.done]);
+  while (S.samples.length > 2 && tt - S.samples[0][0] > 3) S.samples.shift();
+  const [t1, d1] = S.samples[0];
+  const rate = tt > t1 ? (e.done - d1) / (tt - t1) : 0;
+  const pv = e.total ? Math.min(1, e.done / e.total) : 0;
+  $("barCopy").style.width = "100%"; $("pCopy").textContent = "100 %";
+  $("barVerify").style.width = pv * 100 + "%"; $("pVerify").textContent = Math.floor(pv * 100) + " %";
+  $("pct").textContent = Math.floor(pv * 100);
+  $("ringArc").style.strokeDashoffset = 414.69 * (1 - pv);
+  ringLabel("ring_label_rv"); $("phase").textContent = t("ph_source");
+  $("speed").innerHTML = rate ? `${Math.round(rate / 1e6)}<small style="font-size:11px;color:var(--muted)"> ${esc(t("mbs"))}</small>` : "-";
+  $("eta").textContent = rate ? fmtTime((e.total - e.done) / rate) : "-";
+  $("elapsed").textContent = fmtTime(tt - S.t0);
+  const k = S.fileToClip[S.curIndex];
+  if (k != null && S.clipState[k][0] === "run") {
+    const inFile = Math.max(0, e.done - S.completedBytes);
+    setClip(k, "run", Math.min(1, (S.clipDone[k] + Math.min(inFile, S.fileSizes[S.curIndex] || 0)) / S.tableClips[k].bytes));
   }
 }
 
@@ -517,13 +576,38 @@ async function reverify() {
   if (S.running) return;
   const p = await api.pickMhl();
   if (!p) return;
-  log("info", t("reverify_start", { p }));
-  setChip("run", "chip_reverify");
-  try {
-    const [n, errs] = await api.reverify(p);
-    if (errs.length) { errs.forEach((x) => log("error", x)); setChip("err", "chip_errors"); }
-    else { log("ok", t("reverify_ok", { n })); setChip("ok", "chip_verified"); }
-  } catch (e) { log("fatal", String(e)); setChip("err", "chip_error"); }
+  S.mode = "reverify"; S.summary = null; S.rvReport = null; $("banner").innerHTML = "";
+  ["openPdf", "reveal"].forEach((b) => $(b).classList.add("hide"));
+  resetDashboard(); $("log").innerHTML = "";
+  if (api.demo) log("info", t("reverify_start", { p }));
+  S.running = true; refresh(); setChip("run", "chip_reverify");
+  try { await api.reverify(p); }
+  catch (e) { S.running = false; S.mode = null; refresh(); setChip("err", "chip_error"); log("fatal", String(e)); }
+}
+
+function rvMsg(r) {
+  const extra = r.extra?.length ? " " + t("rv_extra", { n: r.extra.length }) : "";
+  return (r.ok ? t("rv_ok_msg", { n: r.files_ok }) : r.cancelled ? t("rv_cancel_msg") : t("rv_err_msg", { n: r.errors.length })) + extra;
+}
+
+// Fin de re-vérification : même présentation qu'un déchargement (cercle, bandeau, son)
+function finishReverify(r) {
+  S.running = false; S.mode = null; S.cancelArmed = 0; refresh();
+  const ok = r.ok;
+  setChip(ok ? "ok" : "err", ok ? "chip_verified" : r.cancelled ? "chip_cancelled" : "chip_errors");
+  $("ringArc").style.stroke = ok ? "var(--ok)" : "var(--err)";
+  if (ok) { $("pct").textContent = "100"; $("ringArc").style.strokeDashoffset = 0; }
+  ringLabel(r.cancelled ? "ring_label_rv" : "ring_done");
+  $("phase").textContent = t(ok ? "ph_verified" : r.cancelled ? "ph_cancelled" : "ph_errors");
+  $("cur").textContent = "";
+  S.rvReport = r; $("footMsg").textContent = rvMsg(r);
+  // Amène le premier clip en erreur à l'écran
+  const bad = S.clipState.findIndex((st) => st[0] === "err");
+  if (bad >= 0) $("clip" + bad)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  $("banner").innerHTML = `<div class="banner ${ok ? "ok" : "err"}">${esc(t(ok ? "rv_banner_ok" : r.cancelled ? "banner_cancel" : "banner_err"))}
+    <span>${esc(ok ? t("rv_banner_ok_sub") : r.cancelled ? "" : t("rv_banner_err_sub", { m: r.missing, d: r.mismatched }))}</span></div>`;
+  setTimeout(() => ($("banner").innerHTML = ""), 9000);
+  try { new Audio("data:audio/wav;base64," + chime(ok)).play().catch(() => {}); } catch {}
 }
 
 // ------------------------------------------------------------------ Divers

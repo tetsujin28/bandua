@@ -16,7 +16,7 @@ use i18n::{fill, tr};
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -157,6 +157,29 @@ pub enum Event {
     FileResult { index: usize, result: FileResult },
     Log { level: String, message: String },
     Finished { summary: Box<Summary> },
+    /// Re-vérification : contenu du MHL, regroupé en clips, envoyé avant `Started`
+    Reverify { info: ScanInfo },
+    /// Re-vérification terminée
+    ReverifyFinished { report: ReverifyReport },
+}
+
+/// Résultat d'une re-vérification à partir d'un MHL.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReverifyReport {
+    pub folder: PathBuf,
+    pub checked: usize,
+    pub total_files: usize,
+    pub files_ok: usize,
+    /// Fichiers listés dans le MHL mais introuvables
+    pub missing: usize,
+    /// Fichiers dont le hash (ou la taille) ne correspond plus
+    pub mismatched: usize,
+    /// Messages d'erreur, un par fichier en défaut
+    pub errors: Vec<String>,
+    /// Fichiers présents dans le dossier mais absents du MHL (non vérifiés)
+    pub extra: Vec<String>,
+    pub cancelled: bool,
+    pub ok: bool,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -737,64 +760,219 @@ pub fn hb(lang: &str, b: u64) -> String {
     if lang == "en" { txt } else { txt.replace('.', ",") }
 }
 
-/// Re-vérifie un dossier existant à partir de son MHL (mode « re-vérification »).
-pub fn verify_mhl(mhl: &Path, cancel: &AtomicBool) -> Result<(usize, Vec<String>), String> {
-    let txt = fs::read_to_string(mhl).map_err(|e| e.to_string())?;
-    let root = mhl.parent().unwrap_or(Path::new("."));
-    let mut checked = 0;
-    let mut errors = vec![];
-    let mut buf = rawio::AlignedBuf::new(BUF);
+/// Une ligne du MHL
+struct MhlEntry {
+    rel: String,
+    size: Option<u64>,
+    algo: Algo,
+    hash: String,
+}
+
+fn parse_mhl(txt: &str) -> Result<Vec<MhlEntry>, String> {
+    let mut out = vec![];
     for block in txt.split("<hash>").skip(1) {
-        if cancel.load(Ordering::Relaxed) {
-            break;
-        }
         let tag = |t: &str| -> Option<String> {
             let a = block.find(&format!("<{t}>"))? + t.len() + 2;
             let b = block[a..].find(&format!("</{t}>"))? + a;
             Some(report::xml_unescape(&block[a..b]))
         };
-        let Some(file) = tag("file") else { continue };
-        let (algo, expected) = [Algo::Xxh64, Algo::Xxh3, Algo::Md5, Algo::Sha1]
+        let Some(rel) = tag("file") else { continue };
+        let (algo, hash) = [Algo::Xxh64, Algo::Xxh3, Algo::Md5, Algo::Sha1]
             .into_iter()
-            .find_map(|a| tag(a.mhl_tag()).map(|h| (a, h)))
-            .ok_or_else(|| format!("aucun hash pour {file}"))?;
-        let p = root.join(&file);
+            .find_map(|a| tag(a.mhl_tag()).map(|h| (a, h.trim().to_ascii_lowercase())))
+            .ok_or_else(|| format!("aucun hash pour {rel}"))?;
         let size = tag("size").and_then(|v| v.trim().parse::<u64>().ok());
-        let mut h = hash::Hasher::new(algo);
-        let res = match size {
-            // Relecture sans cache, bornée à la taille notée dans le MHL
-            Some(sz) => match rawio::open_uncached(&p) {
-                Ok((mut fh, _)) => rawio::read_sized(&mut fh, sz, &mut buf, |d| {
+        out.push(MhlEntry { rel: rel.replace('\\', "/"), size, algo, hash });
+    }
+    Ok(out)
+}
+
+/// Re-vérifie un dossier déjà copié à partir de son MHL, avec les mêmes
+/// événements de progression qu'un déchargement (clips, fichiers, progression).
+/// Les fichiers sont relus sans passer par le cache du système.
+pub fn reverify(
+    mhl: &Path,
+    lang: &str,
+    cancel: &AtomicBool,
+    emit: &mut dyn FnMut(Event),
+) -> Result<ReverifyReport, String> {
+    let lg = lang;
+    let txt = fs::read_to_string(mhl).map_err(|e| format!("{} : {e}", mhl.display()))?;
+    let entries = parse_mhl(&txt)?;
+    if entries.is_empty() {
+        return Err(fill(tr(lg, "err_mhl_empty"), &[("p", mhl.display().to_string())]));
+    }
+    let root = mhl.parent().unwrap_or(Path::new(".")).to_path_buf();
+    // taille notée dans le MHL, sinon taille actuelle du fichier
+    let sizes: Vec<u64> = entries
+        .iter()
+        .map(|e| e.size.or_else(|| fs::metadata(root.join(&e.rel)).ok().map(|m| m.len())).unwrap_or(0))
+        .collect();
+    let pairs: Vec<(String, u64)> = entries.iter().zip(&sizes).map(|(e, &s)| (e.rel.clone(), s)).collect();
+    let clips = clips::group_clips(&pairs);
+    let brand = clips::dominant_brand(&clips);
+    let total_bytes: u64 = sizes.iter().sum();
+    let folder_name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    emit(Event::Reverify {
+        info: ScanInfo {
+            source: root.clone(),
+            card_label: folder_name.clone(),
+            total_files: entries.len(),
+            total_bytes,
+            brand,
+            brand_label: brand.label().to_string(),
+            clips,
+        },
+    });
+    emit(Event::Started { total_files: entries.len(), total_bytes, work_bytes: total_bytes, folder_name: folder_name.clone() });
+    emit(Event::Log {
+        level: "info".into(),
+        message: fill(
+            tr(lg, "msg_reverify"),
+            &[("p", root.display().to_string()), ("n", entries.len().to_string()), ("size", hb(lg, total_bytes))],
+        ),
+    });
+
+    let mut buf = rawio::AlignedBuf::new(BUF);
+    let mut th = Throttle { last: Instant::now() };
+    let mut done = 0u64;
+    let (mut checked, mut files_ok, mut missing, mut mismatched) = (0, 0, 0, 0);
+    let mut errors = vec![];
+    let mut cancelled = false;
+    for (i, (e, &size)) in entries.iter().zip(&sizes).enumerate() {
+        if cancel.load(Ordering::Relaxed) {
+            cancelled = true;
+            break;
+        }
+        emit(Event::File { index: i, rel: e.rel.clone(), size });
+        let p = root.join(&e.rel);
+        let mut h = hash::Hasher::new(e.algo);
+        let base = done;
+        let mut uncached = false;
+        let res: Result<(), (bool, String)> = match rawio::open_uncached(&p) {
+            Err(_) => Err((true, tr(lg, "err_missing").into())),
+            Ok((mut f, unc)) => {
+                uncached = unc;
+                rawio::read_sized(&mut f, size, &mut buf, |d| {
+                    if cancel.load(Ordering::Relaxed) {
+                        return Err("annulé".into());
+                    }
                     h.update(d);
+                    done += d.len() as u64;
+                    if th.ready() {
+                        emit(Event::Progress { done, total: total_bytes, phase: Phase::Verify, file_index: i });
+                    }
                     Ok(())
                 })
-                .map_err(|e| read_err("fr", "lecture", e, sz)),
-                Err(_) => Err(format!("manquant : {file}")),
-            },
-            // Ancien MHL sans taille : lecture classique jusqu'à la fin
-            None => match File::open(&p) {
-                Ok(mut fh) => loop {
-                    match fh.read(&mut buf) {
-                        Ok(0) => break Ok(()),
-                        Ok(n) => h.update(&buf[..n]),
-                        Err(e) => break Err(e.to_string()),
-                    }
-                },
-                Err(_) => Err(format!("manquant : {file}")),
-            },
+                .map_err(|err| match err {
+                    rawio::ReadError::Abort(m) => (false, m),
+                    other => (false, read_err(lg, tr(lg, "reading"), other, size)),
+                })
+            }
         };
-        match res {
+        if cancel.load(Ordering::Relaxed) {
+            cancelled = true;
+            break;
+        }
+        done = base + size;
+        emit(Event::Progress { done, total: total_bytes, phase: Phase::Verify, file_index: i });
+        checked += 1;
+        let actual = h.finish_hex();
+        let error = match res {
+            Ok(()) if actual == e.hash => None,
             Ok(()) => {
-                if h.finish_hex() != expected.trim().to_ascii_lowercase() {
-                    errors.push(format!("hash différent : {file}"));
+                mismatched += 1;
+                Some(tr(lg, "err_hash_changed").to_string())
+            }
+            Err((true, m)) => {
+                missing += 1;
+                Some(m)
+            }
+            Err((false, m)) => {
+                mismatched += 1;
+                Some(m)
+            }
+        };
+        let ok = error.is_none();
+        if ok {
+            files_ok += 1;
+        } else {
+            let m = format!("{} {} : {}", tr(lg, "msg_fail"), e.rel, error.clone().unwrap_or_default());
+            emit(Event::Log { level: "error".into(), message: m.clone() });
+            errors.push(m);
+        }
+        let missing_file = error.as_deref() == Some(tr(lg, "err_missing"));
+        emit(Event::FileResult {
+            index: i,
+            result: FileResult {
+                rel: e.rel.clone(),
+                size,
+                source_hash: e.hash.clone(),
+                dests: if missing_file { vec![] } else { vec![DestCheck { ok, hash: actual }] },
+                ok,
+                error,
+                uncached,
+            },
+        });
+    }
+
+    // Fichiers présents dans le dossier mais absents du MHL
+    let mut extra = vec![];
+    if !cancelled {
+        let listed: std::collections::HashSet<&str> = entries.iter().map(|e| e.rel.as_str()).collect();
+        let stem = mhl.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        if let Ok((files, _)) = scan(&root) {
+            for f in files {
+                let own_report = !f.rel.contains('/') && f.rel.starts_with(&stem);
+                if !listed.contains(f.rel.as_str()) && !own_report {
+                    extra.push(f.rel);
                 }
             }
-            Err(e) if e.starts_with("manquant") => errors.push(e),
-            Err(e) => errors.push(format!("{file} : {e}")),
         }
-        checked += 1;
+        for (n, x) in extra.iter().enumerate() {
+            if n == 20 {
+                emit(Event::Log {
+                    level: "warn".into(),
+                    message: fill(tr(lg, "msg_extra_more"), &[("n", (extra.len() - 20).to_string())]),
+                });
+                break;
+            }
+            emit(Event::Log { level: "warn".into(), message: fill(tr(lg, "msg_extra"), &[("p", x.clone())]) });
+        }
     }
-    Ok((checked, errors))
+
+    let ok = !cancelled && errors.is_empty() && checked == entries.len();
+    emit(Event::Log {
+        level: if ok { "ok" } else { "error" }.into(),
+        message: if cancelled {
+            tr(lg, "msg_reverify_cancelled").into()
+        } else if ok {
+            fill(tr(lg, "msg_reverify_ok"), &[("n", files_ok.to_string())])
+        } else {
+            fill(tr(lg, "msg_reverify_err"), &[("n", errors.len().to_string())])
+        },
+    });
+    let report = ReverifyReport {
+        folder: root,
+        checked,
+        total_files: entries.len(),
+        files_ok,
+        missing,
+        mismatched,
+        errors,
+        extra,
+        cancelled,
+        ok,
+    };
+    emit(Event::ReverifyFinished { report: report.clone() });
+    Ok(report)
+}
+
+/// Re-vérification sans interface (outil en ligne de commande, tests) :
+/// renvoie le nombre de fichiers contrôlés et les erreurs.
+pub fn verify_mhl(mhl: &Path, cancel: &AtomicBool) -> Result<(usize, Vec<String>), String> {
+    let r = reverify(mhl, "fr", cancel, &mut |_| {})?;
+    Ok((r.checked, r.errors))
 }
 
 #[cfg(test)]
@@ -952,6 +1130,40 @@ mod tests {
         assert_eq!(s.source_changes.len(), 1);
         assert!(s.source_changes[0].contains("A001_C002_1106XY.RDM.txt"));
         assert!(leftovers(&s.dest_dirs[0]).is_empty());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// Re-vérification : fichier abîmé, fichier supprimé, fichier ajouté
+    #[test]
+    fn reverify_reports_problems() {
+        let root = tmp("reverify");
+        let src = card(&root);
+        let s = run(&job(&src, dests(&root, 1)), &AtomicBool::new(false), &mut |_| {}).unwrap();
+        let dir = &s.dest_dirs[0];
+        let mhl = s.reports.iter().find(|p| p.extension().is_some_and(|e| e == "mhl")).unwrap();
+
+        let ok = reverify(mhl, "fr", &AtomicBool::new(false), &mut |_| {}).unwrap();
+        assert!(ok.ok && ok.extra.is_empty(), "{:?}", ok.extra);
+        assert_eq!((ok.checked, ok.files_ok), (3, 3));
+
+        let r3d = dir.join("A001_C001_1106AB.RDM/A001_C001_1106AB_001.R3D");
+        let mut data = fs::read(&r3d).unwrap();
+        data[10] ^= 0xff;
+        fs::write(&r3d, data).unwrap();
+        fs::remove_file(dir.join("notes.txt")).unwrap();
+        fs::write(dir.join("ajout.txt"), b"x").unwrap();
+        let mut clips = 0;
+        let mut finished = false;
+        let bad = reverify(mhl, "en", &AtomicBool::new(false), &mut |e| match e {
+            Event::Reverify { info } => clips = info.clips.len(),
+            Event::ReverifyFinished { .. } => finished = true,
+            _ => {}
+        })
+        .unwrap();
+        assert!(finished && clips >= 1);
+        assert!(!bad.ok);
+        assert_eq!((bad.files_ok, bad.missing, bad.mismatched), (1, 1, 1));
+        assert_eq!(bad.extra, vec!["ajout.txt".to_string()]);
         let _ = fs::remove_dir_all(&root);
     }
 
