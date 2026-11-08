@@ -1,107 +1,123 @@
-# Bandua : état du projet et feuille de route
+# Bandua : où j'en suis et ce qui vient
 
-Document de passage de relais. À lire en premier pour reprendre le projet dans une nouvelle conversation.
+Mes notes de travail sur Bandua : l'état du projet, mes choix et la suite.
 Dernière mise à jour : 8 novembre 2026.
 
-## 1. Ce qu'est Bandua
+## Le projet
 
-Application gratuite de déchargement de rushes (offload) pour Windows, macOS et Linux, par **Domingo Olmo Martin** (DOP, réalisateur, scénariste).
-Elle copie une carte caméra vers une ou plusieurs destinations en une seule lecture, vérifie chaque copie par hash et écrit un rapport PDF, un log, un MHL et un JSON.
+Bandua est mon application gratuite de déchargement de rushes, pour Windows, macOS et Linux. Elle copie une carte caméra vers un ou plusieurs disques en une seule lecture, vérifie chaque copie par hash et produit un rapport PDF, un log, un MHL et un JSON.
+
+Je l'ai d'abord appelée Offload, puis Bandua, du nom d'une divinité protectrice de l'ouest de la péninsule Ibérique. Son nom évoquerait le « lien », peut-être aussi le passage, ce qui colle bien à une appli qui fait passer les rushes d'un support à l'autre en les protégeant.
+
+C'est l'application sœur d'**Ataecina**, mon outil de récupération et de réparation de rushes.
 
 - Dépôt : https://github.com/tetsujin28/bandua (privé pour l'instant)
-- Release actuelle : v0.1.0 (pré-version bêta), 6 fichiers attachés automatiquement
-- Application sœur : **Ataecina** (récupération et réparation de rushes), même auteur
-- Nom : Bandua, divinité protectrice de l'ouest de la péninsule Ibérique (le nom évoquerait le « lien », peut-être aussi le passage)
-- Ancien nom de travail : Offload
+- Version actuelle : v0.1.0, publiée en pré-version bêta
 
-## 2. Architecture
+## Feuille de route, par ordre de priorité
 
-```
-core/        moteur Rust (bandua-core) : copie, hash, clips, rapports, i18n, mini générateur PDF
-  src/lib.rs      run(), scan(), verify_mhl(), folder_name(), hb() (tailles par langue)
-  src/clips.rs    regroupement en clips par marque (RED .RDC, ARRI séquences/MXF, BRAW, Sony, GoPro…)
-  src/hash.rs     xxHash64 (défaut), XXH3, MD5, SHA-1
-  src/report.rs   PDF, log texte, MHL 1.1, JSON (dans la langue choisie)
-  src/i18n.rs     textes FR / EN / ES du moteur et des rapports
-  src/pdf.rs      générateur PDF sans dépendance (Helvetica, Courier, WinAnsi)
-  src/bin/cli.rs  bandua-cli pour tester le moteur sans interface
-src-tauri/   application Tauri 2 (commandes : pick_folder, scan_source, start_offload, cancel_offload, reverify…)
-ui/          interface HTML/CSS/JS sans framework ni npm (index.html, i18n.js, app.js)
-             s'ouvre aussi dans un navigateur en mode démo (carte RED simulée)
-docs/screenshots/  9 captures (3 par langue : offload, verified, report)
-.github/workflows/build.yml  build Windows / macOS universel / Linux
-```
+### 1. Fiabilité (V0.2) : la base de tout
+Une appli de déchargement qui n'est pas irréprochable ne sert à rien. C'est la priorité absolue.
+- Relire les copies sans passer par le cache du système, pour que la vérification se fasse vraiment sur le disque (FILE_FLAG_NO_BUFFERING sous Windows, F_NOCACHE sous macOS, équivalent sous Linux)
+- Relire la source une seconde fois, pour repérer un lecteur de cartes ou un câble qui flanche
+- Détecter une source qui change pendant la copie
 
-Fonctionnement du moteur : écriture en `.bandua-part`, relecture de chaque copie depuis le disque, renommage seulement si le hash correspond, sinon `.HASH_ERREUR`. Dossier daté `AAAA-MM-JJ_HHMM_PROJET_JOUR_CAMERA_CARTE` dans chaque destination. Fichiers système ignorés. Date de modification d'origine conservée.
+### 2. Tests en conditions réelles
+Avant de faire connaître Bandua, il doit avoir fait ses preuves.
+- Décharger de vraies cartes de mes caméras : RED, ARRI, Blackmagic, et quelques caméras moins pro
+- Provoquer les pannes : débrancher un disque en pleine copie, remplir un disque, corrompre un fichier, et vérifier que Bandua réagit comme il faut
+- Faire tester une bêta à quelques collègues
 
-## 3. Ce qui est fait (v0.1.0)
+### 3. Trier les fonctionnalités
+Mon expérience du plateau me dit qu'une partie de ce que proposent les logiciels du marché ne sert pas. Je dois faire le tri entre ce qui est inutile, ce qui est indispensable et ce qui manque, avant d'aller plus loin. Mes premiers doutes : l'intégration Frame.io ou cloud, le démarrage automatique à l'insertion d'une carte (trop risqué), la santé des disques (SMART) et les notifications sur téléphone.
 
-- Copie multi-destinations en une lecture, vérification par relecture, contrôle d'espace libre
-- Rapports PDF, log, MHL 1.1, JSON dans la langue de l'interface (`_rapport.pdf`, `_report.pdf`, `_informe.pdf`)
-- Re-vérification d'un dossier à partir de son MHL
-- Interface sombre, sélecteur de langue FR / EN / ES (bascule à chaud), langue du système par défaut
-- Bouton « Nouveau déchargement » après succès, « Relancer cette carte » après erreur ou annulation
-- Annulation par double clic (pas de boîte de dialogue bloquante)
-- Avertissement de non-responsabilité à accepter au premier lancement, rappelé dans À propos, en pied de PDF et à la fin du log
-- Crédits « Bandua by Domingo Olmo Martin » : en-tête, À propos, PDF, log, MHL, installeur
-- Licence MIT (fichier `LICENSE` avec avertissement en anglais, français et espagnol)
-- README en anglais + `README.fr.md` + `README.es.md`, avec captures dans chaque langue
-- Release GitHub remplie automatiquement à chaque publication (workflow `release: published`)
-- Description du dépôt en anglais et 11 mots-clés (dit, offload, checksum, mhl, xxhash, filmmaking, red-camera, arri, braw, tauri, rust)
-
-## 4. Décisions prises
-
-- **Pile technique** : Tauri 2 + Rust, interface sans npm (Dom n'a pas npm sur son PC Windows 11)
-- **Distribution** : les utilisateurs téléchargent un exécutable, ils n'installent jamais Rust. Applis non signées pour l'instant, avertissement Windows / macOS jugé acceptable
-- **Langues** : anglais en premier sur GitHub, traductions en fichiers séparés (README) ou sections repliées (notes de Release)
-- **Identité visuelle à venir** : **noir et blanc**, icône **ronde** (plus de dégradé orange). Le vert et le rouge restent réservés à « vérifié » et « erreur »
-- **Pistes d'icône** : couronne crénelée (couronne murale), profil de la gardienne façon pièce antique, autel votif vu de face. Dom génère l'icône lui-même dans ComfyUI (Flux 3)
-- **Iconographie de Bandua** : seule image connue, la patère de Bandis Araugelensis (Museo Nacional de Arte Romano, Mérida) : figure féminine, couronne murale, corne d'abondance, patère
-
-## 5. Feuille de route proposée (à valider par Dom)
-
-Dom a de l'expérience de plateau et juge certaines fonctions inutiles. **Étape suivante : il fait le tri** (inutile / indispensable / manquant). Liste proposée avant ce tri :
-
-**V0.2 : fiabilité (priorité)**
-- Relecture sans cache disque (FILE_FLAG_NO_BUFFERING sous Windows, F_NOCACHE sous macOS, équivalent Linux)
-- Double lecture de la source (détection d'un lecteur ou d'un câble défaillant)
-- Détection d'une source modifiée pendant la copie
-
-**V0.3 : confort de plateau**
-- File d'attente de cartes, éjection automatique
+### 4. Confort de plateau (V0.3)
+- File d'attente de cartes et éjection automatique de la carte vérifiée
 - Presets de nommage par production
 - Pause et reprise
 
-**V0.4 : rapports pro**
-- Vignettes et métadonnées (ffmpeg pour MOV / MP4 / MXF ; outils RED, ARRI, Blackmagic s'ils sont installés, licences à vérifier)
-- Logo et coordonnées sur le PDF
+### 5. Identité visuelle
+- Nouvelle icône **ronde, en noir et blanc**, que je génère dans ComfyUI (Flux 3). Pistes : la couronne crénelée, le profil de la gardienne façon pièce antique, l'autel votif vu de face. La seule représentation connue de Bandua, sur la patère de Bandis Araugelensis (Museo Nacional de Arte Romano, Mérida), montre une figure féminine avec une couronne murale, une corne d'abondance et une patère.
+- Passer l'interface en noir et blanc. Le vert et le rouge restent réservés à « vérifié » et « erreur ».
+- Refaire les 9 captures d'écran avec la nouvelle identité.
+
+### 6. Rapports pro (V0.4)
+- Vignettes et métadonnées des clips dans le PDF : ffmpeg pour MOV, MP4 et MXF, et les outils RED, ARRI et Blackmagic s'ils sont installés (licences à vérifier)
+- Mon logo et mes coordonnées sur le PDF
 - ASC MHL v2
 
-**Plus tard / à confirmer**
-- Copies en cascade, historique, détection de carte déjà copiée
+### 7. Sortie publique
+- Passer le dépôt en public
+- Créer le site de Bandua (voir plus bas)
 
-**Probablement inutiles selon une première analyse** (à confirmer par Dom) : intégration Frame.io / cloud, démarrage automatique à l'insertion (risqué), santé des disques SMART, notifications sur téléphone.
+### 8. Plus tard, si le besoin se confirme
+- Copies en cascade (vers un SSD rapide d'abord, puis vers les autres disques)
+- Historique des déchargements et détection d'une carte déjà copiée
 
-## 6. Comparaison avec ShotPut Pro (résumé)
+## Le site, tel que je l'imagine
 
-ShotPut Pro est bien plus mûr (vignettes et métadonnées, automatisation, presets, pause, contrôles de source, ASC MHL v2, 20 ans de confiance). Atouts de Bandua : gratuit, open source, Linux, pas de compte ni de licence, français, simplicité.
-Positionnement visé : la solution gratuite et sérieuse pour petites équipes, courts métrages, indépendants et étudiants.
-Avant toute diffusion large : tests sur de vraies cartes (RED, ARRI, Blackmagic) et tests de panne volontaires (disque débranché, disque plein, fichier corrompu), puis bêta avec quelques collègues.
+Une seule page, très frontale :
+- une barre fixe avec un bouton Télécharger toujours visible ;
+- une ouverture en plein écran avec « Copied. Verified. Proven. » et un bouton qui détecte le système du visiteur ;
+- un bandeau de preuve : 1 lecture, xxHash64, PDF + MHL, 3 langues ;
+- le problème en une phrase : ne plus jamais formater une carte sur la foi d'une barre de progression ;
+- le fonctionnement en 3 étapes, puis la grille des fonctionnalités ;
+- les caméras compatibles, en texte, sans les logos des marques ;
+- le rapport PDF, puis une galerie de captures ;
+- une présentation de moi, avec photo, bio et pourquoi j'ai fait Bandua, et un lien vers Ataecina ;
+- une FAQ, puis un dernier bloc de téléchargement et le pied de page.
 
-## 7. Chantiers en attente
+Il me faudra une bio, une photo, l'adresse du site (GitHub Pages ou mon propre domaine) et la nouvelle icône.
 
-1. **Tri des fonctionnalités** par Dom, puis développement de la V0.2
-2. **Icône** noir et blanc ronde (Dom), puis passer l'interface en noir et blanc et refaire les 9 captures
-3. **Site web** (plus tard), une seule page très frontale :
-   barre fixe avec bouton Télécharger · hero « Copied. Verified. Proven. » avec bouton qui détecte le système · bandeau de preuve (1 lecture, xxHash64, PDF + MHL, 3 langues) · le problème en une phrase · 3 étapes · grille de fonctionnalités · caméras compatibles (en texte, pas de logos) · le rapport · galerie · à propos de Dom (photo, bio, pourquoi Bandua, lien vers Ataecina) · FAQ · téléchargement final · pied de page.
-   Besoins : bio et photo de Dom, adresse du site (GitHub Pages ou domaine perso), nouvelle icône.
-4. **Passage du dépôt en public** : décision de Dom (Settings > Danger Zone > Change visibility)
+## Face à ShotPut Pro
 
-## 8. Notes pratiques pour travailler sur le dépôt
+ShotPut Pro est bien plus mûr : vignettes et métadonnées, automatisation, presets, pause, contrôles de la source, ASC MHL v2, et surtout vingt ans de confiance des productions. Bandua a d'autres atouts : il est gratuit, open source, disponible sous Linux, sans compte ni licence, traduit en français, et simple.
 
-- Publier une version : changer la version dans `src-tauri/tauri.conf.json` et `src-tauri/Cargo.toml`, puis créer une Release avec le tag `vX.Y.Z`. GitHub Actions fabrique et attache les fichiers (environ 25 minutes)
-- Test sans Release : onglet Actions > build > Run workflow (fichiers disponibles en « Artifacts » pendant 90 jours)
-- Le glisser-déposer web de GitHub ignore le dossier `.github` : créer ou modifier le workflow via l'éditeur web
-- Les fichiers binaires (images, icônes) doivent être glissés par Dom depuis son ordinateur sur la page d'upload GitHub
-- Tester le moteur : `cargo test -p bandua-core` et `bandua-cli <source> <dest…> --lang fr|en|es`
-- Préférences de rédaction de Dom : pas de tiret cadratin, interface sombre qu'il apprécie, travail progressif
+Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Bandua devienne l'outil gratuit et sérieux des petites équipes, des courts métrages, des indépendants et des étudiants, qui copient encore trop souvent leurs cartes à la main sans aucune vérification.
+
+## Ce qui existe déjà (v0.1.0)
+
+- Copie vers plusieurs destinations en une lecture, vérification par relecture, contrôle de l'espace libre
+- Écriture en `.bandua-part`, renommage seulement si le hash correspond, sinon `.HASH_ERREUR`
+- Dossier daté `AAAA-MM-JJ_HHMM_PROJET_JOUR_CAMERA_CARTE` dans chaque destination, fichiers système ignorés, dates de modification d'origine conservées
+- Reconnaissance des clips par marque (un .RDC RED, un dossier ARRIRAW, un .braw…)
+- Rapports PDF, log, MHL 1.1 et JSON dans la langue de l'interface (`_rapport.pdf`, `_report.pdf`, `_informe.pdf`)
+- Re-vérification d'un dossier à partir de son MHL
+- Interface sombre en français, anglais et espagnol, avec changement de langue à chaud
+- Bouton « Nouveau déchargement » après succès, « Relancer cette carte » après erreur ou annulation, annulation par double clic
+- Avertissement de non-responsabilité à accepter au premier lancement, rappelé dans À propos, sur chaque PDF et à la fin du log
+- Crédits « Bandua by Domingo Olmo Martin » dans l'appli, les rapports, le MHL et l'installeur
+- Licence MIT, avec l'avertissement en anglais, français et espagnol
+- README en anglais, français et espagnol, avec captures dans chaque langue
+- Release GitHub remplie automatiquement à chaque publication
+
+## Mes choix
+
+- **Tauri 2 et Rust**, avec une interface en HTML, CSS et JavaScript sans npm
+- **Des exécutables prêts à l'emploi** : personne n'a besoin d'installer Rust. L'appli n'est pas encore signée, l'avertissement au premier lancement me convient pour l'instant
+- **L'anglais en premier sur GitHub**, avec des traductions séparées pour le README et repliées dans les notes de version
+- **Le code libre (MIT)**, avec une clause claire sur ma non-responsabilité en cas de perte de données
+
+## Organisation du code
+
+```
+core/        moteur Rust (bandua-core) : copie, hash, clips, rapports, traductions, générateur PDF
+  src/lib.rs      run(), scan(), verify_mhl(), folder_name(), hb()
+  src/clips.rs    regroupement des fichiers en clips par marque
+  src/hash.rs     xxHash64 (par défaut), XXH3, MD5, SHA-1
+  src/report.rs   PDF, log, MHL 1.1, JSON
+  src/i18n.rs     textes FR / EN / ES du moteur et des rapports
+  src/pdf.rs      générateur PDF sans dépendance
+  src/bin/cli.rs  bandua-cli, pour tester le moteur sans interface
+src-tauri/   application de bureau Tauri 2
+ui/          interface (index.html, i18n.js, app.js), utilisable aussi en mode démo dans un navigateur
+docs/        ce document et les captures d'écran
+.github/workflows/build.yml  fabrication Windows, macOS universel et Linux
+```
+
+## Aide-mémoire
+
+- **Publier une version** : changer le numéro dans `src-tauri/tauri.conf.json` et `src-tauri/Cargo.toml`, puis créer une Release avec le tag `vX.Y.Z`. GitHub fabrique et attache les fichiers en 25 minutes environ.
+- **Tester sans publier** : Actions > build > Run workflow. Les fichiers restent 90 jours dans « Artifacts ».
+- **Envoyer des fichiers sur GitHub** : le glisser-déposer ignore le dossier `.github`, il faut modifier le workflow dans l'éditeur web. Les images et icônes se glissent depuis mon ordinateur.
+- **Tester le moteur** : `cargo test -p bandua-core`, puis `bandua-cli <source> <destinations…> --lang fr|en|es`.
