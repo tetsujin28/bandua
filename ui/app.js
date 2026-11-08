@@ -455,7 +455,6 @@ function progress(e) {
   while (S.samples.length > 2 && tt - S.samples[0][0] > 3) S.samples.shift();
   const [t1, d1] = S.samples[0];
   const rate = tt > t1 ? (e.done - d1) / (tt - t1) : 0;
-  const pct = e.total ? e.done / e.total : 0;
   // Répartition copie / vérification
   const size = S.fileSizes[S.curIndex] || 0;
   const inFile = Math.max(0, e.done - S.completedBytes);
@@ -464,8 +463,10 @@ function progress(e) {
   const pc = S.totalBytes ? copyBytes / S.totalBytes : 0, pv = S.totalBytes ? verBytes / (S.totalBytes * S.n) : 0;
   $("barCopy").style.width = pc * 100 + "%"; $("pCopy").textContent = Math.floor(pc * 100) + " %";
   $("barVerify").style.width = pv * 100 + "%"; $("pVerify").textContent = Math.floor(pv * 100) + " %";
-  $("pct").textContent = Math.floor(pct * 100);
-  $("ringArc").style.strokeDashoffset = 414.69 * (1 - pct);
+  // Le cercle montre la part de la carte déjà vérifiée : c'est le même chiffre que la barre bleue
+  const pr = Math.min(1, pv);
+  $("pct").textContent = Math.floor(pr * 100);
+  $("ringArc").style.strokeDashoffset = 414.69 * (1 - pr);
   const verifying = inFile > size;
   const rereading = S.reread && inFile > size * (1 + S.nDest);
   $("phase").textContent = t(rereading ? "ph_source" : verifying ? "ph_verify" : "ph_copy");
