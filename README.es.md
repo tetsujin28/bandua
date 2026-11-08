@@ -30,6 +30,8 @@ Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)**
 - **Windows**: haz clic en «Más información» y después en «Ejecutar de todas formas».
 - **macOS**: haz clic derecho en la aplicación, elige «Abrir» y confirma.
 
+Tu navegador también puede marcar la descarga como inusual o peligrosa: es habitual con una aplicación reciente y sin firmar. Conserva el archivo desde el panel de descargas y, si tienes dudas, analízalo en [VirusTotal](https://www.virustotal.com).
+
 ## Qué hace
 
 - **Copia en una sola pasada** a 1, 2 o más destinos al mismo tiempo.
@@ -40,7 +42,7 @@ Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)**
 - **Copia la tarjeta tal cual**: RED (.RDM / .RDC), ARRI (ARRIRAW, MXF, ProRes), Blackmagic (BRAW), Sony, Canon, GoPro, DJI… sin los archivos de sistema innecesarios.
 - **Reconoce los clips** para listarlos correctamente en el informe (una carpeta .RDC de RED = un clip).
 - **Escribe 4 informes** en cada carpeta con fecha: un informe PDF, un log de texto, un archivo MHL (legible por Silverstack, ShotPut, Hedge…) y un archivo JSON.
-- **Reverifica** una carpeta existente a partir de su MHL, antes de formatear una tarjeta o entregar un disco.
+- **Reverifica** una carpeta existente a partir de su MHL, antes de formatear una tarjeta o entregar un disco: progreso, estado de cada clip (verificado, dañado, falta), archivos añadidos a la carpeta señalados, informe PDF y log escritos junto al MHL.
 - **Comprueba el espacio libre** y te avisa antes de empezar.
 - **Botón «Nuevo volcado»** para encadenar tarjetas: se conservan los destinos y los datos del proyecto.
 
@@ -49,8 +51,10 @@ Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)**
 1. Haz clic en **Origen** y selecciona la tarjeta.
 2. Añade uno o varios **destinos**.
 3. Rellena el proyecto, el día de rodaje, la cámara y la tarjeta (el número de tarjeta se rellena automáticamente a partir de los nombres de los clips).
-4. Haz clic en **Iniciar el volcado**.
-5. Espera al aviso verde **TARJETA VERIFICADA** antes de formatear la tarjeta.
+4. Haz clic en **Iniciar el volcado**. El círculo indica la parte de la tarjeta copiada, y luego «verificando / espere» durante los últimos controles.
+5. Espera a que el círculo se ponga verde y al aviso **TARJETA VERIFICADA** antes de formatear la tarjeta. Un clic en un destino abre la carpeta copiada.
+
+Para comprobar un disco más tarde (antes de formatear una tarjeta o al entregar un disco), haz clic en **Reverificar un MHL** y elige el archivo `.mhl` de la carpeta con fecha.
 
 ## Capturas de pantalla
 

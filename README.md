@@ -30,6 +30,8 @@ Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and
 - **Windows**: click "More info", then "Run anyway".
 - **macOS**: right-click the app, choose "Open", then confirm.
 
+Your browser may also flag the download as unusual or dangerous: this is common for new, unsigned apps. Keep the file from the downloads panel, and if in doubt, check it on [VirusTotal](https://www.virustotal.com).
+
 ## What it does
 
 - **Copies in a single pass** to 1, 2 or more destinations at the same time.
@@ -40,7 +42,7 @@ Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and
 - **Copies the card exactly as it is**: RED (.RDM / .RDC), ARRI (ARRIRAW, MXF, ProRes), Blackmagic (BRAW), Sony, Canon, GoPro, DJI… without system junk files.
 - **Recognises clips** to list them properly in the report (one RED .RDC folder = one clip).
 - **Writes 4 reports** in each dated folder: a PDF report, a text log, an MHL file (readable by Silverstack, ShotPut, Hedge…) and a JSON file.
-- **Re-verifies** an existing folder from its MHL, before you format a card or deliver a drive.
+- **Re-verifies** an existing folder from its MHL, before you format a card or deliver a drive: progress, a status for each clip (verified, damaged, missing), files added to the folder are flagged, and a PDF report and a log are written next to the MHL.
 - **Checks free space** and warns you before starting.
 - **"New offload" button** to chain cards: destinations and project info are kept.
 
@@ -49,8 +51,10 @@ Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and
 1. Click **Source** and select the card.
 2. Add one or more **destinations**.
 3. Fill in the project, shoot day, camera and card (the card number is filled automatically from the clip names).
-4. Click **Start offload**.
-5. Wait for the green **CARD VERIFIED** banner before formatting the card.
+4. Click **Start offload**. The ring shows how much of the card is copied, then "verifying / wait" while the last checks run.
+5. Wait for the ring to turn green and the **CARD VERIFIED** banner before formatting the card. Click a destination to open the copied folder.
+
+To check a drive later (before formatting a card, or when delivering a drive), click **Re-verify an MHL** and pick the `.mhl` file in the dated folder.
 
 ## Screenshots
 

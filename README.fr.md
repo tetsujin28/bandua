@@ -30,6 +30,8 @@ Rendez-vous sur la **[page des Releases](https://github.com/tetsujin28/bandua/re
 - **Windows** : cliquez sur « Informations complémentaires », puis « Exécuter quand même ».
 - **macOS** : faites un clic droit sur l'application, choisissez « Ouvrir », puis confirmez.
 
+Votre navigateur peut aussi signaler le téléchargement comme inhabituel ou dangereux : c'est fréquent pour une application récente et non signée. Conservez le fichier depuis le panneau des téléchargements et, en cas de doute, faites-le analyser sur [VirusTotal](https://www.virustotal.com).
+
 ## Ce que fait Bandua
 
 - **Copie en une seule passe** vers 1, 2 destinations ou plus en même temps.
@@ -40,7 +42,7 @@ Rendez-vous sur la **[page des Releases](https://github.com/tetsujin28/bandua/re
 - **Copie la carte à l'identique** : RED (.RDM / .RDC), ARRI (ARRIRAW, MXF, ProRes), Blackmagic (BRAW), Sony, Canon, GoPro, DJI… sans les fichiers système parasites.
 - **Reconnaît les clips** pour les lister proprement dans le rapport (un dossier .RDC RED = un clip).
 - **Écrit 4 rapports** dans chaque dossier daté : un rapport PDF, un log texte, un fichier MHL (lisible par Silverstack, ShotPut, Hedge…) et un fichier JSON.
-- **Re-vérifie** un dossier existant à partir de son MHL, avant de formater une carte ou de livrer un disque.
+- **Re-vérifie** un dossier existant à partir de son MHL, avant de formater une carte ou de livrer un disque : progression, statut de chaque clip (vérifié, abîmé, manquant), fichiers ajoutés au dossier signalés, rapport PDF et log écrits à côté du MHL.
 - **Contrôle l'espace libre** et vous prévient avant de commencer.
 - **Bouton « Nouveau déchargement »** pour enchaîner les cartes : destinations et informations du projet sont conservées.
 
@@ -49,8 +51,10 @@ Rendez-vous sur la **[page des Releases](https://github.com/tetsujin28/bandua/re
 1. Cliquez sur **Source** et sélectionnez la carte.
 2. Ajoutez une ou plusieurs **destinations**.
 3. Renseignez le projet, le jour de tournage, la caméra et la carte (le numéro de carte se remplit automatiquement à partir des noms de clips).
-4. Cliquez sur **Lancer le déchargement**.
-5. Attendez le bandeau vert **CARTE VÉRIFIÉE** avant de formater la carte.
+4. Cliquez sur **Lancer le déchargement**. Le cercle indique la part de la carte copiée, puis « vérification / patientez » pendant les derniers contrôles.
+5. Attendez que le cercle passe au vert et le bandeau **CARTE VÉRIFIÉE** avant de formater la carte. Un clic sur une destination ouvre le dossier copié.
+
+Pour contrôler un disque plus tard (avant de formater une carte ou à la livraison d'un disque), cliquez sur **Re-vérifier un MHL** et choisissez le fichier `.mhl` du dossier daté.
 
 ## Captures d'écran
 
