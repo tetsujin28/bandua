@@ -51,7 +51,8 @@ Mon expérience du plateau me dit qu'une partie de ce que proposent les logiciel
 - Refaire les 9 captures d'écran avec la nouvelle identité.
 
 ### 6. Rapports pro (V0.4)
-- Vignettes et métadonnées des clips dans le PDF : ffmpeg pour MOV, MP4 et MXF, et les outils RED, ARRI et Blackmagic s'ils sont installés (licences à vérifier)
+- Métadonnées des clips dans le PDF (caméra, cadence, durée, timecode, ISO, balance des blancs, objectif) : ffmpeg pour MOV, MP4 et MXF, et les moteurs officiels RED, ARRI et Blackmagic s'ils sont installés chez l'utilisateur (leurs licences interdisent de les distribuer avec Bandua)
+- Pas de vignettes dans le PDF (décidé le 8 novembre 2026) : ffmpeg ne sait pas décoder les formats RAW (BRAW, R3D, ARRIRAW), il faudrait les moteurs propriétaires pour chacun, pour un bénéfice faible sur un rapport de déchargement
 - Mon logo et mes coordonnées sur le PDF
 - ASC MHL v2
 
