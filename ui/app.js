@@ -108,14 +108,14 @@ function demoBackend() {
     cancel: async () => { cancelled = true; },
     start: async (job) => {
       const info = redCard(job.source), files = info.files;
-      const n = job.destinations.length, work = info.total_bytes * (1 + n);
+      const n = job.destinations.length + (job.source_reread ? 1 : 0), work = info.total_bytes * (1 + n);
       const now = new Date(), p = (x) => String(x).padStart(2, "0");
       const san = (s) => s.trim().replace(/[^\p{L}\p{N}_-]/gu, "_").replace(/^_+|_+$/g, "");
       const folder = [`${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}`,
         ...[job.project, job.day, job.camera, job.card].map(san).filter(Boolean)].join("_");
       cancelled = false;
       handler({ type: "started", total_files: files.length, total_bytes: info.total_bytes, work_bytes: work, folder_name: folder });
-      handler({ type: "log", level: "info", message: t("log_summary", { card: info.card_label, n: files.length, size: fmtBytes(info.total_bytes), brand: "RED", d: n }) });
+      handler({ type: "log", level: "info", message: t("log_summary", { card: info.card_label, n: files.length, size: fmtBytes(info.total_bytes), brand: "RED", d: job.destinations.length }) });
       let i = 0, inFile = 0, done = 0;
       const t0 = performance.now(), results = [], RATE = 1_050_000_000;
       handler({ type: "file", index: 0, rel: files[0].rel, size: files[0].size });
@@ -132,7 +132,7 @@ function demoBackend() {
           inFile += step; done += step; budget -= step;
           if (inFile >= f.size * (1 + n)) {
             const h = hex();
-            const r = { rel: f.rel, size: f.size, source_hash: h, dests: job.destinations.map(() => ({ hash: h, ok: true })), ok: true, error: null };
+            const r = { rel: f.rel, size: f.size, source_hash: h, dests: job.destinations.map(() => ({ hash: h, ok: true })), ok: true, error: null, uncached: true };
             results.push(r);
             handler({ type: "file_result", index: i, result: r });
             i++; inFile = 0;
@@ -177,6 +177,8 @@ function init() {
   });
   $("algo").value = store.get("algo", "xxh64");
   $("algo").onchange = () => { store.set("algo", $("algo").value); refresh(); };
+  $("reread").checked = store.get("reread", true);
+  $("reread").onchange = () => store.set("reread", $("reread").checked);
   $("src").onclick = chooseSource;
   $("addDest").onclick = addDest;
   $("go").onclick = () => (S.running ? cancel() : S.summary && lastOk() ? newOffload() : start());
@@ -297,7 +299,7 @@ function updateName() { if (!S.running && !S.summary) $("fname").textContent = f
 
 function lastOk() {
   const s = S.summary;
-  return !!s && !s.cancelled && s.files_failed === 0 && s.files_ok === s.total_files;
+  return !!s && !s.cancelled && s.files_failed === 0 && s.files_ok === s.total_files && !(s.source_changes?.length);
 }
 
 function refresh() {
@@ -379,6 +381,7 @@ async function start() {
   if (!S.info || !S.dests.length) return;
   const job = {
     source: S.source, destinations: S.dests.map((d) => d.path), algo: $("algo").value, lang: LANG,
+    source_reread: $("reread").checked,
     ...Object.fromEntries(FIELDS.map((f) => [f, $(f).value.trim()])),
   };
   S.summary = null; $("banner").innerHTML = "";
@@ -386,6 +389,7 @@ async function start() {
   buildClipTable();
   resetDashboard();
   $("log").innerHTML = "";
+  S.reread = job.source_reread; S.nDest = job.destinations.length;
   S.running = true; refresh(); setChip("run", "chip_copy");
   try { await api.start(job); } catch (e) { S.running = false; refresh(); setChip("err", "chip_error"); log("fatal", String(e)); }
 }
@@ -453,7 +457,8 @@ function progress(e) {
   $("pct").textContent = Math.floor(pct * 100);
   $("ringArc").style.strokeDashoffset = 414.69 * (1 - pct);
   const verifying = inFile > size;
-  $("phase").textContent = t(verifying ? "ph_verify" : "ph_copy");
+  const rereading = S.reread && inFile > size * (1 + S.nDest);
+  $("phase").textContent = t(rereading ? "ph_source" : verifying ? "ph_verify" : "ph_copy");
   setChip("run", verifying ? "chip_verify" : "chip_copy");
   $("speed").innerHTML = rate ? `${Math.round(rate / 1e6)}<small style="font-size:11px;color:var(--muted)"> ${esc(t("mbs"))}</small>` : "-";
   $("eta").textContent = rate ? fmtTime((e.total - e.done) / rate) : "-";
@@ -470,7 +475,7 @@ function finishTexts(sum) {
   $("phase").textContent = t(ok ? "ph_verified" : sum.cancelled ? "ph_cancelled" : "ph_errors");
   $("cur").innerHTML = ok ? `<b>${esc(sum.folder_name)}</b>  ${esc(t("cur_done"))}` : "";
   $("footMsg").textContent = ok ? t("done_msg", { n: sum.files_ok, d: sum.dest_dirs.length, r: Math.round(sum.avg_mb_s) })
-    : sum.cancelled ? t("cancelled_msg") : t("errors_msg", { n: sum.files_failed });
+    : sum.cancelled ? t("cancelled_msg") : sum.files_failed ? t("errors_msg", { n: sum.files_failed }) : t("src_changed_msg");
 }
 
 function finish(sum) {

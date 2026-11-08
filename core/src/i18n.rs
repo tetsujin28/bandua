@@ -107,6 +107,85 @@ pub fn tr(lang: &str, key: &str) -> &'static str {
             "hash mismatch on at least one destination",
             "hash diferente en al menos un destino",
         ],
+        // contrôles de fiabilité (V0.2)
+        "checks" => ["Contrôles", "Checks", "Controles"],
+        "chk_uncached" => [
+            "copies relues sur le disque (cache système contourné)",
+            "copies re-read from disk (system cache bypassed)",
+            "copias releídas del disco (caché del sistema evitada)",
+        ],
+        "chk_cached" => [
+            "copies relues via le cache système (contournement impossible sur ce volume)",
+            "copies re-read through the system cache (bypass unavailable on this volume)",
+            "copias releídas a través de la caché del sistema (no se pudo evitar en este volumen)",
+        ],
+        "chk_reread" => ["carte lue deux fois", "card read twice", "tarjeta leída dos veces"],
+        "chk_single" => ["carte lue une fois", "card read once", "tarjeta leída una vez"],
+        "chk_watch" => [
+            "source surveillée pendant la copie",
+            "source monitored during the copy",
+            "origen vigilado durante la copia",
+        ],
+        "src_changes" => [
+            "SOURCE MODIFIÉE PENDANT LE DÉCHARGEMENT",
+            "SOURCE CHANGED DURING THE OFFLOAD",
+            "ORIGEN MODIFICADO DURANTE EL VOLCADO",
+        ],
+        "chg_added" => [
+            "fichier apparu sur la carte pendant la copie, non copié : {p}",
+            "file appeared on the card during the copy, not copied: {p}",
+            "archivo aparecido en la tarjeta durante la copia, no copiado: {p}",
+        ],
+        "chg_removed" => [
+            "fichier disparu de la carte après sa copie : {p}",
+            "file disappeared from the card after its copy: {p}",
+            "archivo desaparecido de la tarjeta tras su copia: {p}",
+        ],
+        "chg_modified" => [
+            "fichier modifié sur la carte après sa copie : {p}",
+            "file modified on the card after its copy: {p}",
+            "archivo modificado en la tarjeta tras su copia: {p}",
+        ],
+        "chg_unreadable" => [
+            "carte illisible en fin de déchargement : {e}",
+            "card unreadable at the end of the offload: {e}",
+            "tarjeta ilegible al final del volcado: {e}",
+        ],
+        "err_src_changed" => [
+            "la source a changé pendant la copie (taille ou date)",
+            "the source changed during the copy (size or date)",
+            "el origen cambió durante la copia (tamaño o fecha)",
+        ],
+        "err_src_unstable" => [
+            "les deux lectures de la carte diffèrent : lecteur, câble ou carte défaillant",
+            "the two reads of the card differ: faulty reader, cable or card",
+            "las dos lecturas de la tarjeta difieren: lector, cable o tarjeta defectuoso",
+        ],
+        "err_src_reread" => [
+            "seconde lecture de la carte impossible",
+            "second read of the card failed",
+            "segunda lectura de la tarjeta imposible",
+        ],
+        "err_short" => [
+            "fichier plus court que prévu ({got} octets sur {exp})",
+            "file shorter than expected ({got} of {exp} bytes)",
+            "archivo más corto de lo previsto ({got} de {exp} bytes)",
+        ],
+        "err_long" => [
+            "fichier plus long que prévu ({exp} octets attendus)",
+            "file longer than expected ({exp} bytes expected)",
+            "archivo más largo de lo previsto ({exp} bytes esperados)",
+        ],
+        "msg_src_changed" => [
+            "La carte a changé pendant le déchargement ({n} changement(s)) : ne la formatez pas, relancez-la",
+            "The card changed during the offload ({n} change(s)): do not format it, run it again",
+            "La tarjeta cambió durante el volcado ({n} cambio(s)): no la formatee, vuelva a lanzarla",
+        ],
+        "msg_cached_warn" => [
+            "Attention : sur au moins une destination, la relecture n'a pas pu contourner le cache système",
+            "Warning: on at least one destination, the re-read could not bypass the system cache",
+            "Atención: en al menos un destino, la relectura no pudo evitar la caché del sistema",
+        ],
         _ => ["?", "?", "?"],
     };
     row[l]

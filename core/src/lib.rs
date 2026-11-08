@@ -6,6 +6,7 @@ pub mod clips;
 pub mod hash;
 pub mod i18n;
 pub mod pdf;
+pub mod rawio;
 mod report;
 
 pub use clips::{Brand, Clip};
@@ -46,10 +47,17 @@ pub struct Job {
     /// Langue des rapports : fr, en, es
     #[serde(default = "default_lang")]
     pub lang: String,
+    /// Relire la carte une seconde fois pour repérer un lecteur ou un câble défaillant
+    #[serde(default = "default_true")]
+    pub source_reread: bool,
 }
 
 fn default_lang() -> String {
     "fr".into()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -87,6 +95,8 @@ pub struct FileResult {
     pub dests: Vec<DestCheck>,
     pub ok: bool,
     pub error: Option<String>,
+    /// Les copies ont été relues sur le disque, sans passer par le cache du système
+    pub uncached: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -120,11 +130,21 @@ pub struct Summary {
     pub clips: Vec<ClipStatus>,
     pub files: Vec<FileResult>,
     pub reports: Vec<PathBuf>,
+    /// Toutes les relectures ont contourné le cache du système
+    pub uncached: bool,
+    /// Changements constatés sur la source pendant le déchargement
+    /// (fichiers apparus, disparus ou modifiés après leur copie)
+    pub source_changes: Vec<String>,
+    /// Résultat global, repris tel quel par l'interface
+    pub ok: bool,
 }
 
 impl Summary {
     pub fn success(&self) -> bool {
-        !self.cancelled && self.files_failed == 0 && self.files_ok == self.total_files
+        !self.cancelled
+            && self.files_failed == 0
+            && self.files_ok == self.total_files
+            && self.source_changes.is_empty()
     }
 }
 
@@ -144,6 +164,8 @@ pub enum Event {
 pub enum Phase {
     Copy,
     Verify,
+    /// Seconde lecture de la carte
+    Source,
 }
 
 /// Fichiers système à ne jamais copier.
@@ -298,7 +320,9 @@ pub fn run(job: &Job, cancel: &AtomicBool, emit: &mut dyn FnMut(Event)) -> Resul
     }
 
     let n = dest_dirs.len() as u64;
-    let work = info.total_bytes * (1 + n);
+    // passes par fichier : 1 lecture de la carte, n relectures, + 1 relecture de la carte en option
+    let passes = 1 + n + job.source_reread as u64;
+    let work = info.total_bytes * passes;
     emit(Event::Started {
         total_files: files.len(),
         total_bytes: info.total_bytes,
@@ -321,7 +345,7 @@ pub fn run(job: &Job, cancel: &AtomicBool, emit: &mut dyn FnMut(Event)) -> Resul
 
     let mut done: u64 = 0;
     let mut results: Vec<FileResult> = Vec::with_capacity(files.len());
-    let mut buf = vec![0u8; BUF];
+    let mut buf = rawio::AlignedBuf::new(BUF);
     let mut th = Throttle { last: Instant::now() };
     let mut cancelled = false;
 
@@ -331,14 +355,14 @@ pub fn run(job: &Job, cancel: &AtomicBool, emit: &mut dyn FnMut(Event)) -> Resul
             break;
         }
         emit(Event::File { index: i, rel: f.rel.clone(), size: f.size });
-        let r = copy_and_verify(job.algo, lg, f, &dest_dirs, &mut buf, cancel, &mut |phase, delta| {
+        let r = copy_and_verify(job.algo, lg, f, &dest_dirs, &mut buf, job.source_reread, cancel, &mut |phase, delta| {
             done += delta;
             if th.ready() {
                 emit(Event::Progress { done, total: work, phase, file_index: i });
             }
         });
         // recaler le compteur si le fichier a échoué en cours de route
-        let expected: u64 = results.iter().map(|r| r.size).sum::<u64>() * (1 + n) + f.size * (1 + n);
+        let expected: u64 = results.iter().map(|r| r.size).sum::<u64>() * passes + f.size * passes;
         done = expected;
         emit(Event::Progress { done, total: work, phase: Phase::Verify, file_index: i });
 
@@ -351,6 +375,7 @@ pub fn run(job: &Job, cancel: &AtomicBool, emit: &mut dyn FnMut(Event)) -> Resul
                 dests: vec![],
                 ok: false,
                 error: Some(e),
+                uncached: false,
             },
         };
         if !res.ok {
@@ -365,6 +390,12 @@ pub fn run(job: &Job, cancel: &AtomicBool, emit: &mut dyn FnMut(Event)) -> Resul
             cancelled = true;
             break;
         }
+    }
+
+    // La carte a-t-elle changé pendant le déchargement ?
+    let source_changes = if cancelled { vec![] } else { source_changes(lg, &job.source, &files, &results) };
+    for c in &source_changes {
+        emit(Event::Log { level: "error".into(), message: c.clone() });
     }
 
     // Statut par clip
@@ -409,9 +440,16 @@ pub fn run(job: &Job, cancel: &AtomicBool, emit: &mut dyn FnMut(Event)) -> Resul
         avg_mb_s: info.total_bytes as f64 / 1_000_000.0 / secs,
         brand: info.brand_label.clone(),
         clips,
+        uncached: results.iter().any(|r| r.ok) && results.iter().filter(|r| r.ok).all(|r| r.uncached),
         files: results,
         reports: vec![],
+        source_changes,
+        ok: false,
     };
+    summary.ok = summary.success();
+    if summary.files_ok > 0 && !summary.uncached {
+        emit(Event::Log { level: "warn".into(), message: tr(lg, "msg_cached_warn").into() });
+    }
 
     let mtimes: Vec<Option<filetime::FileTime>> = files.iter().map(|f| f.mtime).collect();
     for d in &dest_dirs {
@@ -436,6 +474,8 @@ pub fn run(job: &Job, cancel: &AtomicBool, emit: &mut dyn FnMut(Event)) -> Resul
             )
         } else if cancelled {
             tr(lg, "msg_cancelled").into()
+        } else if summary.files_failed == 0 {
+            fill(tr(lg, "msg_src_changed"), &[("n", summary.source_changes.len().to_string())])
         } else {
             fill(tr(lg, "msg_done_errors"), &[("n", summary.files_failed.to_string())])
         },
@@ -450,88 +490,174 @@ fn part_path(final_path: &Path) -> PathBuf {
     PathBuf::from(s)
 }
 
+/// Taille et date de modification actuelles d'un fichier source.
+fn source_sig(p: &Path) -> std::io::Result<(u64, filetime::FileTime)> {
+    let md = fs::metadata(p)?;
+    Ok((md.len(), filetime::FileTime::from_last_modification_time(&md)))
+}
+
+/// Le fichier source est-il resté tel qu'il était à l'analyse de la carte ?
+fn source_unchanged(f: &FileEntry) -> bool {
+    match source_sig(&f.abs) {
+        Ok((size, mt)) => size == f.size && f.mtime.is_none_or(|m| m == mt),
+        Err(_) => false,
+    }
+}
+
+/// Message d'erreur lisible pour une lecture bornée.
+fn read_err(lg: &str, what: &str, e: rawio::ReadError, expected: u64) -> String {
+    match e {
+        rawio::ReadError::Io(e) => format!("{what} : {e}"),
+        rawio::ReadError::Short(got) => format!(
+            "{what} : {}",
+            fill(tr(lg, "err_short"), &[("got", got.to_string()), ("exp", expected.to_string())])
+        ),
+        rawio::ReadError::Long => format!("{what} : {}", fill(tr(lg, "err_long"), &[("exp", expected.to_string())])),
+        rawio::ReadError::Abort(m) => m,
+    }
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Point d'injection des tests : appelé juste avant la seconde lecture de la carte.
+    static BEFORE_REREAD: std::cell::Cell<Option<fn(&Path)>> = const { std::cell::Cell::new(None) };
+}
+
+#[allow(clippy::too_many_arguments)]
 fn copy_and_verify(
     algo: Algo,
     lg: &str,
     f: &FileEntry,
     dest_dirs: &[PathBuf],
     buf: &mut [u8],
+    reread: bool,
     cancel: &AtomicBool,
     progress: &mut dyn FnMut(Phase, u64),
 ) -> Result<FileResult, String> {
     let finals: Vec<PathBuf> = dest_dirs.iter().map(|d| d.join(&f.rel)).collect();
     let parts: Vec<PathBuf> = finals.iter().map(|p| part_path(p)).collect();
+    // En cas d'échec avant la finalisation, on ne laisse aucun fichier partiel
+    copy_and_verify_inner(algo, lg, f, &finals, &parts, buf, reread, cancel, progress).inspect_err(|_| cleanup(&parts))
+}
 
-    // 1. Copie : une lecture source, écriture vers toutes les destinations
-    let mut src = File::open(&f.abs).map_err(|e| format!("ouverture source : {e}"))?;
+#[allow(clippy::too_many_arguments)]
+fn copy_and_verify_inner(
+    algo: Algo,
+    lg: &str,
+    f: &FileEntry,
+    finals: &[PathBuf],
+    parts: &[PathBuf],
+    buf: &mut [u8],
+    reread: bool,
+    cancel: &AtomicBool,
+    progress: &mut dyn FnMut(Phase, u64),
+) -> Result<FileResult, String> {
+    let cancelled = || -> Result<(), String> {
+        if cancel.load(Ordering::Relaxed) {
+            Err("annulé".into())
+        } else {
+            Ok(())
+        }
+    };
+
+    // 0. La source est-elle toujours celle qu'on a analysée ?
+    if !source_unchanged(f) {
+        return Err(tr(lg, "err_src_changed").into());
+    }
+
+    // 1. Copie : une lecture de la carte, écriture vers toutes les destinations
+    let (mut src, _) = rawio::open_uncached(&f.abs).map_err(|e| format!("ouverture source : {e}"))?;
     let mut outs: Vec<File> = vec![];
-    for p in &parts {
+    for p in parts {
         if let Some(parent) = p.parent() {
             fs::create_dir_all(parent).map_err(|e| format!("dossier {} : {e}", parent.display()))?;
         }
-        outs.push(
-            OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(p)
-                .map_err(|e| format!("création {} : {e}", p.display()))?,
-        );
+        let o = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(p)
+            .map_err(|e| format!("création {} : {e}", p.display()))?;
+        rawio::prepare_write(&o);
+        outs.push(o);
     }
     let mut h = hash::Hasher::new(algo);
-    let mut read_total = 0u64;
-    loop {
-        if cancel.load(Ordering::Relaxed) {
-            cleanup(&parts);
-            return Err("annulé".into());
+    rawio::read_sized(&mut src, f.size, buf, |data| {
+        cancelled()?;
+        h.update(data);
+        for (o, p) in outs.iter_mut().zip(parts) {
+            o.write_all(data).map_err(|e| format!("écriture {} : {e}", p.display()))?;
         }
-        let n = src.read(buf).map_err(|e| format!("lecture source : {e}"))?;
-        if n == 0 {
-            break;
-        }
-        h.update(&buf[..n]);
-        for (o, p) in outs.iter_mut().zip(&parts) {
-            o.write_all(&buf[..n]).map_err(|e| format!("écriture {} : {e}", p.display()))?;
-        }
-        read_total += n as u64;
-        progress(Phase::Copy, n as u64);
-    }
-    if read_total != f.size {
-        cleanup(&parts);
-        return Err(format!("taille lue {read_total} ≠ taille attendue {}", f.size));
-    }
+        progress(Phase::Copy, data.len() as u64);
+        Ok(())
+    })
+    .map_err(|e| read_err(lg, "lecture source", e, f.size))?;
+    drop(src);
+    // Écriture physique sur les disques (F_FULLFSYNC sous macOS), puis vidage du cache
     for o in &outs {
         o.sync_all().map_err(|e| format!("synchronisation disque : {e}"))?;
+        rawio::drop_cache(o);
     }
     drop(outs);
     let source_hash = h.finish_hex();
 
-    // 2. Vérification : relecture de chaque copie depuis le disque
+    // 2. Vérification : relecture de chaque copie depuis le disque, sans cache
     let mut dests = vec![];
-    for p in &parts {
-        let mut rf = File::open(p).map_err(|e| format!("relecture {} : {e}", p.display()))?;
+    let mut uncached = true;
+    for p in parts {
+        let (mut rf, unc) = rawio::open_uncached(p).map_err(|e| format!("relecture {} : {e}", p.display()))?;
+        uncached &= unc;
         let mut hh = hash::Hasher::new(algo);
-        loop {
-            if cancel.load(Ordering::Relaxed) {
-                cleanup(&parts);
-                return Err("annulé".into());
-            }
-            let n = rf.read(buf).map_err(|e| format!("relecture : {e}"))?;
-            if n == 0 {
-                break;
-            }
-            hh.update(&buf[..n]);
-            progress(Phase::Verify, n as u64);
-        }
+        rawio::read_sized(&mut rf, f.size, buf, |data| {
+            cancelled()?;
+            hh.update(data);
+            progress(Phase::Verify, data.len() as u64);
+            Ok(())
+        })
+        .map_err(|e| read_err(lg, &format!("relecture {}", p.display()), e, f.size))?;
         let hx = hh.finish_hex();
         dests.push(DestCheck { ok: hx == source_hash, hash: hx });
     }
 
-    // 3. Finalisation : renommage + date de modification d'origine
-    let all_ok = dests.iter().all(|d| d.ok);
-    let mut error = None;
-    for ((p, fin), d) in parts.iter().zip(&finals).zip(&dests) {
-        if d.ok {
+    // 3. Seconde lecture de la carte : un lecteur ou un câble qui flanche
+    //    ne renvoie pas deux fois les mêmes données
+    let mut source_error: Option<String> = None;
+    if reread {
+        #[cfg(test)]
+        if let Some(hook) = BEFORE_REREAD.with(|c| c.get()) {
+            hook(&f.abs);
+        }
+        let mut h2 = hash::Hasher::new(algo);
+        let r = rawio::open_uncached(&f.abs)
+            .map_err(rawio::ReadError::Io)
+            .and_then(|(mut s2, _)| {
+                rawio::read_sized(&mut s2, f.size, buf, |data| {
+                    cancelled()?;
+                    h2.update(data);
+                    progress(Phase::Source, data.len() as u64);
+                    Ok(())
+                })
+            });
+        match r {
+            Ok(()) if h2.finish_hex() == source_hash => {}
+            Ok(()) => source_error = Some(tr(lg, "err_src_unstable").into()),
+            Err(rawio::ReadError::Abort(m)) => return Err(m),
+            Err(rawio::ReadError::Io(e)) => source_error = Some(format!("{} : {e}", tr(lg, "err_src_reread"))),
+            Err(_) => source_error = Some(tr(lg, "err_src_changed").into()),
+        }
+    }
+
+    // 4. La source a-t-elle changé pendant ce temps ?
+    if source_error.is_none() && !source_unchanged(f) {
+        source_error = Some(tr(lg, "err_src_changed").into());
+    }
+
+    // 5. Finalisation : renommage + date de modification d'origine,
+    //    ou marquage .HASH_ERREUR si quoi que ce soit est douteux
+    let trusted = source_error.is_none() && dests.iter().all(|d| d.ok);
+    let mut error = source_error;
+    for ((p, fin), d) in parts.iter().zip(finals).zip(&dests) {
+        if trusted {
             if let Err(e) = fs::rename(p, fin) {
                 error = Some(format!("renommage : {e}"));
             } else if let Some(mt) = f.mtime {
@@ -541,16 +667,57 @@ fn copy_and_verify(
             let mut bad = fin.as_os_str().to_owned();
             bad.push(".HASH_ERREUR");
             let _ = fs::rename(p, PathBuf::from(bad));
-            error = Some(tr(lg, "err_hash").into());
+            if error.is_none() && !d.ok {
+                error = Some(tr(lg, "err_hash").into());
+            }
         }
     }
-    Ok(FileResult { rel: f.rel.clone(), size: f.size, source_hash, dests, ok: all_ok && error.is_none(), error })
+    Ok(FileResult {
+        rel: f.rel.clone(),
+        size: f.size,
+        source_hash,
+        dests,
+        ok: trusted && error.is_none(),
+        error,
+        uncached,
+    })
 }
 
 fn cleanup(parts: &[PathBuf]) {
     for p in parts {
         let _ = fs::remove_file(p);
     }
+}
+
+/// Compare la carte en fin de déchargement avec son état initial :
+/// fichiers apparus (non copiés), disparus, ou modifiés après une copie réussie.
+fn source_changes(lg: &str, source: &Path, before: &[FileEntry], results: &[FileResult]) -> Vec<String> {
+    let after = match scan(source) {
+        Ok((files, _)) => files,
+        Err(e) => return vec![fill(tr(lg, "chg_unreadable"), &[("e", e)])],
+    };
+    let mut changes = vec![];
+    let old: std::collections::HashMap<&str, (usize, &FileEntry)> =
+        before.iter().enumerate().map(|(i, f)| (f.rel.as_str(), (i, f))).collect();
+    let new: std::collections::HashMap<&str, &FileEntry> = after.iter().map(|f| (f.rel.as_str(), f)).collect();
+    for f in &after {
+        match old.get(f.rel.as_str()) {
+            None => changes.push(fill(tr(lg, "chg_added"), &[("p", f.rel.clone())])),
+            Some((i, o)) => {
+                // un fichier déjà en erreur a déjà son propre message
+                let copied_ok = results.get(*i).is_some_and(|r| r.ok);
+                if copied_ok && (o.size != f.size || o.mtime != f.mtime) {
+                    changes.push(fill(tr(lg, "chg_modified"), &[("p", f.rel.clone())]));
+                }
+            }
+        }
+    }
+    for (i, f) in before.iter().enumerate() {
+        if !new.contains_key(f.rel.as_str()) && results.get(i).is_some_and(|r| r.ok) {
+            changes.push(fill(tr(lg, "chg_removed"), &[("p", f.rel.clone())]));
+        }
+    }
+    changes
 }
 
 pub fn human_bytes(b: u64) -> String {
@@ -576,6 +743,7 @@ pub fn verify_mhl(mhl: &Path, cancel: &AtomicBool) -> Result<(usize, Vec<String>
     let root = mhl.parent().unwrap_or(Path::new("."));
     let mut checked = 0;
     let mut errors = vec![];
+    let mut buf = rawio::AlignedBuf::new(BUF);
     for block in txt.split("<hash>").skip(1) {
         if cancel.load(Ordering::Relaxed) {
             break;
@@ -591,24 +759,217 @@ pub fn verify_mhl(mhl: &Path, cancel: &AtomicBool) -> Result<(usize, Vec<String>
             .find_map(|a| tag(a.mhl_tag()).map(|h| (a, h)))
             .ok_or_else(|| format!("aucun hash pour {file}"))?;
         let p = root.join(&file);
-        match File::open(&p) {
-            Ok(mut fh) => {
-                let mut h = hash::Hasher::new(algo);
-                let mut buf = vec![0u8; BUF];
-                loop {
-                    let n = fh.read(&mut buf).map_err(|e| e.to_string())?;
-                    if n == 0 {
-                        break;
+        let size = tag("size").and_then(|v| v.trim().parse::<u64>().ok());
+        let mut h = hash::Hasher::new(algo);
+        let res = match size {
+            // Relecture sans cache, bornée à la taille notée dans le MHL
+            Some(sz) => match rawio::open_uncached(&p) {
+                Ok((mut fh, _)) => rawio::read_sized(&mut fh, sz, &mut buf, |d| {
+                    h.update(d);
+                    Ok(())
+                })
+                .map_err(|e| read_err("fr", "lecture", e, sz)),
+                Err(_) => Err(format!("manquant : {file}")),
+            },
+            // Ancien MHL sans taille : lecture classique jusqu'à la fin
+            None => match File::open(&p) {
+                Ok(mut fh) => loop {
+                    match fh.read(&mut buf) {
+                        Ok(0) => break Ok(()),
+                        Ok(n) => h.update(&buf[..n]),
+                        Err(e) => break Err(e.to_string()),
                     }
-                    h.update(&buf[..n]);
-                }
-                if h.finish_hex() != expected.to_ascii_lowercase() {
+                },
+                Err(_) => Err(format!("manquant : {file}")),
+            },
+        };
+        match res {
+            Ok(()) => {
+                if h.finish_hex() != expected.trim().to_ascii_lowercase() {
                     errors.push(format!("hash différent : {file}"));
                 }
             }
-            Err(_) => errors.push(format!("manquant : {file}")),
+            Err(e) if e.starts_with("manquant") => errors.push(e),
+            Err(e) => errors.push(format!("{file} : {e}")),
         }
         checked += 1;
     }
     Ok((checked, errors))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmp(name: &str) -> PathBuf {
+        let d = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../target/test-tmp")
+            .join(format!("engine-{}-{name}", std::process::id()));
+        let _ = fs::remove_dir_all(&d);
+        fs::create_dir_all(&d).unwrap();
+        d
+    }
+
+    /// Carte factice : un clip RED et un fichier isolé, tailles non alignées
+    fn card(root: &Path) -> PathBuf {
+        let src = root.join("A001_RED");
+        let clip = src.join("A001_C001_1106AB.RDM/A001_C001_1106AB_001.R3D");
+        fs::create_dir_all(clip.parent().unwrap()).unwrap();
+        fs::write(&clip, (0..3_000_123u32).map(|i| (i % 251) as u8).collect::<Vec<_>>()).unwrap();
+        fs::write(src.join("A001_C001_1106AB.RDM/A001_C001_1106AB.RTN"), b"meta").unwrap();
+        fs::write(src.join("notes.txt"), b"").unwrap();
+        src
+    }
+
+    fn job(src: &Path, dests: Vec<PathBuf>) -> Job {
+        Job {
+            source: src.to_path_buf(),
+            destinations: dests,
+            project: "TEST".into(),
+            day: String::new(),
+            camera: String::new(),
+            card: String::new(),
+            operator: String::new(),
+            notes: String::new(),
+            algo: Algo::Xxh64,
+            lang: "fr".into(),
+            source_reread: true,
+        }
+    }
+
+    fn dests(root: &Path, n: usize) -> Vec<PathBuf> {
+        (0..n)
+            .map(|i| {
+                let d = root.join(format!("dest{i}"));
+                fs::create_dir_all(&d).unwrap();
+                d
+            })
+            .collect()
+    }
+
+    fn leftovers(dir: &Path) -> Vec<String> {
+        WalkDir::new(dir)
+            .into_iter()
+            .filter_map(Result::ok)
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| n.ends_with(".bandua-part") || n.ends_with(".HASH_ERREUR"))
+            .collect()
+    }
+
+    #[test]
+    fn offload_two_destinations() {
+        let root = tmp("ok");
+        let src = card(&root);
+        let d = dests(&root, 2);
+        let mut work = 0;
+        let mut done = 0;
+        let s = run(&job(&src, d.clone()), &AtomicBool::new(false), &mut |e| match e {
+            Event::Started { work_bytes, total_bytes, .. } => {
+                assert_eq!(work_bytes, total_bytes * 4); // copie + 2 relectures + relecture carte
+                work = work_bytes;
+            }
+            Event::Progress { done: dn, .. } => done = dn,
+            _ => {}
+        })
+        .unwrap();
+        assert!(s.success(), "{:?}", s.files.iter().filter(|f| !f.ok).collect::<Vec<_>>());
+        assert!(s.ok && s.source_changes.is_empty());
+        assert_eq!(done, work);
+        #[cfg(target_os = "linux")]
+        assert!(s.uncached);
+        for dd in &s.dest_dirs {
+            for f in &s.files {
+                assert_eq!(fs::read(dd.join(&f.rel)).unwrap(), fs::read(src.join(&f.rel)).unwrap());
+            }
+            assert!(leftovers(dd).is_empty());
+        }
+        let mhl = s.reports.iter().find(|p| p.extension().is_some_and(|e| e == "mhl")).unwrap();
+        let (n, errs) = verify_mhl(mhl, &AtomicBool::new(false)).unwrap();
+        assert_eq!((n, errs.len()), (3, 0));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn single_read_option() {
+        let root = tmp("single");
+        let src = card(&root);
+        let mut j = job(&src, dests(&root, 1));
+        j.source_reread = false;
+        let s = run(&j, &AtomicBool::new(false), &mut |e| {
+            if let Event::Started { work_bytes, total_bytes, .. } = e {
+                assert_eq!(work_bytes, total_bytes * 2);
+            }
+        })
+        .unwrap();
+        assert!(s.success());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// Le lecteur renvoie d'autres données à la seconde lecture (même taille, même date)
+    #[test]
+    fn unstable_reader_is_detected() {
+        fn flip(p: &Path) {
+            if p.extension().is_some_and(|e| e == "R3D") {
+                let mt = filetime::FileTime::from_last_modification_time(&fs::metadata(p).unwrap());
+                let mut data = fs::read(p).unwrap();
+                data[1_234_567] ^= 0x01;
+                fs::write(p, data).unwrap();
+                filetime::set_file_mtime(p, mt).unwrap();
+            }
+        }
+        let root = tmp("unstable");
+        let src = card(&root);
+        BEFORE_REREAD.with(|c| c.set(Some(flip)));
+        let s = run(&job(&src, dests(&root, 1)), &AtomicBool::new(false), &mut |_| {}).unwrap();
+        BEFORE_REREAD.with(|c| c.set(None));
+        assert!(!s.success());
+        let bad: Vec<_> = s.files.iter().filter(|f| !f.ok).collect();
+        assert_eq!(bad.len(), 1);
+        assert_eq!(bad[0].error.as_deref(), Some(tr("fr", "err_src_unstable")));
+        // la copie douteuse est marquée, pas présentée comme bonne
+        assert_eq!(leftovers(&s.dest_dirs[0]).len(), 1);
+        assert!(!s.dest_dirs[0].join(&bad[0].rel).exists());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// La caméra (ou quelqu'un) écrit sur la carte pendant le déchargement
+    #[test]
+    fn source_changes_are_detected() {
+        let root = tmp("changes");
+        let src = card(&root);
+        let src2 = src.clone();
+        let s = run(&job(&src, dests(&root, 1)), &AtomicBool::new(false), &mut |e| {
+            if let Event::File { index: 0, .. } = e {
+                // un fichier pas encore copié grossit, un nouveau fichier apparaît
+                fs::write(src2.join("notes.txt"), b"ajout").unwrap();
+                fs::write(src2.join("A001_C002_1106XY.RDM.txt"), b"nouveau").unwrap();
+            }
+        })
+        .unwrap();
+        assert!(!s.success() && !s.ok);
+        let bad: Vec<_> = s.files.iter().filter(|f| !f.ok).map(|f| f.rel.as_str()).collect();
+        assert_eq!(bad, vec!["notes.txt"]);
+        assert_eq!(s.source_changes.len(), 1);
+        assert!(s.source_changes[0].contains("A001_C002_1106XY.RDM.txt"));
+        assert!(leftovers(&s.dest_dirs[0]).is_empty());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// Un fichier modifié sur la carte après avoir été copié avec succès
+    #[test]
+    fn change_after_copy_is_detected() {
+        let root = tmp("after");
+        let src = card(&root);
+        let src2 = src.clone();
+        let s = run(&job(&src, dests(&root, 1)), &AtomicBool::new(false), &mut |e| {
+            if let Event::FileResult { index: 0, result } = e {
+                fs::write(src2.join(&result.rel), b"ecrase").unwrap();
+            }
+        })
+        .unwrap();
+        assert_eq!(s.files_failed, 0);
+        assert!(!s.success());
+        assert_eq!(s.source_changes.len(), 1);
+        let _ = fs::remove_dir_all(&root);
+    }
 }

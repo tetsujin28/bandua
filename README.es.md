@@ -33,8 +33,10 @@ Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)**
 
 ## Qué hace
 
-- **Lee la tarjeta una sola vez** y escribe en 1, 2 o más destinos al mismo tiempo.
-- **Verifica cada copia** releyéndola desde el disco de destino y comparando los hash (xxHash64 por defecto, XXH3, MD5 o SHA-1). Un archivo solo recibe su nombre definitivo cuando está verificado.
+- **Copia en una sola pasada** a 1, 2 o más destinos al mismo tiempo.
+- **Verifica cada copia** releyéndola desde el disco de destino y comparando los hash (xxHash64 por defecto, XXH3, MD5 o SHA-1). La relectura evita la caché del sistema: se verifica el disco de verdad, no una copia en memoria. Un archivo solo recibe su nombre definitivo cuando está verificado.
+- **Relee la tarjeta una segunda vez** (opción activada por defecto) para detectar un lector de tarjetas, un cable o una tarjeta defectuosos.
+- **Vigila la tarjeta durante el volcado**: un archivo que cambia, aparece o desaparece hace fallar el volcado, para no formatear nunca una tarjeta que todavía se estaba escribiendo.
 - **Crea una carpeta con fecha** en cada destino, por ejemplo `2026-11-06_1633_PROYECTO_D03_A_A003`.
 - **Copia la tarjeta tal cual**: RED (.RDM / .RDC), ARRI (ARRIRAW, MXF, ProRes), Blackmagic (BRAW), Sony, Canon, GoPro, DJI… sin los archivos de sistema innecesarios.
 - **Reconoce los clips** para listarlos correctamente en el informe (una carpeta .RDC de RED = un clip).

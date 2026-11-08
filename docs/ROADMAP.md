@@ -1,7 +1,7 @@
 # Bandua : où j'en suis et ce qui vient
 
 Mes notes de travail sur Bandua : l'état du projet, mes choix et la suite.
-Dernière mise à jour : 8 novembre 2026.
+Dernière mise à jour : 8 novembre 2026 (fiabilité V0.2).
 
 ## Le projet
 
@@ -16,11 +16,14 @@ C'est l'application sœur d'**Ataecina**, mon outil de récupération et de rép
 
 ## Feuille de route, par ordre de priorité
 
-### 1. Fiabilité (V0.2) : la base de tout
+### 1. Fiabilité (V0.2) : la base de tout ✅ codé, à éprouver sur le terrain
 Une appli de déchargement qui n'est pas irréprochable ne sert à rien. C'est la priorité absolue.
-- Relire les copies sans passer par le cache du système, pour que la vérification se fasse vraiment sur le disque (FILE_FLAG_NO_BUFFERING sous Windows, F_NOCACHE sous macOS, équivalent sous Linux)
-- Relire la source une seconde fois, pour repérer un lecteur de cartes ou un câble qui flanche
-- Détecter une source qui change pendant la copie
+- ✅ Relire les copies sans passer par le cache du système, pour que la vérification se fasse vraiment sur le disque : FILE_FLAG_NO_BUFFERING sous Windows, F_NOCACHE sous macOS (en lecture et en écriture, après F_FULLFSYNC), posix_fadvise(DONTNEED) après synchronisation sous Linux. Tampon aligné, lectures bornées à la taille attendue (un fichier trop court ou trop long est une erreur). Si un volume refuse le contournement, le log et le PDF le disent.
+- ✅ Relire la source une seconde fois, pour repérer un lecteur de cartes ou un câble qui flanche. Option « Relire la carte », activée par défaut. Si les deux lectures diffèrent, les copies sont marquées `.HASH_ERREUR`.
+- ✅ Détecter une source qui change pendant la copie : taille et date de chaque fichier contrôlées avant et après sa copie, puis nouvel inventaire de la carte à la fin (fichiers apparus, disparus ou modifiés). Le moindre changement fait échouer le déchargement.
+- ✅ Plus aucun fichier `.bandua-part` laissé derrière en cas d'erreur d'écriture
+- ✅ Tests automatiques des pannes simulées : lecteur instable, fichier modifié avant ou après sa copie, fichier apparu en cours de route
+- Reste à faire : valider sur Windows et macOS avec de vraies cartes (point 2)
 
 ### 2. Tests en conditions réelles
 Avant de faire connaître Bandua, il doit avoir fait ses preuves.
@@ -105,6 +108,7 @@ core/        moteur Rust (bandua-core) : copie, hash, clips, rapports, traductio
   src/lib.rs      run(), scan(), verify_mhl(), folder_name(), hb()
   src/clips.rs    regroupement des fichiers en clips par marque
   src/hash.rs     xxHash64 (par défaut), XXH3, MD5, SHA-1
+  src/rawio.rs    lectures sans cache système, tampon aligné, lectures bornées
   src/report.rs   PDF, log, MHL 1.1, JSON
   src/i18n.rs     textes FR / EN / ES du moteur et des rapports
   src/pdf.rs      générateur PDF sans dépendance

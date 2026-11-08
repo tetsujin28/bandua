@@ -53,6 +53,17 @@ fn duration(secs: f64) -> String {
     }
 }
 
+/// Contrôles effectués, en une ligne : « copies relues sur le disque · carte lue deux fois · … »
+fn checks_line(s: &Summary) -> String {
+    let l = s.job.lang.as_str();
+    [
+        tr(l, if s.uncached { "chk_uncached" } else { "chk_cached" }),
+        tr(l, if s.job.source_reread { "chk_reread" } else { "chk_single" }),
+        tr(l, "chk_watch"),
+    ]
+    .join(" · ")
+}
+
 fn status_word(s: &Summary) -> &'static str {
     let l = s.job.lang.as_str();
     tr(l, if s.cancelled { "cancelled" } else if s.success() { "verified" } else { "errors" })
@@ -83,6 +94,7 @@ fn log_text(s: &Summary) -> String {
         row(&mut t, &format!("{} {}", tr(l, "destination"), i + 1), d.display().to_string());
     }
     row(&mut t, tr(l, "algorithm"), j.algo.label().into());
+    row(&mut t, tr(l, "checks"), checks_line(s));
     row(&mut t, tr(l, "start"), s.started.format(df).to_string());
     row(&mut t, tr(l, "end"), s.finished.format(df).to_string());
     row(&mut t, tr(l, "duration"), format!("{} ({:.0} MB/s)", duration(s.duration_s), s.avg_mb_s));
@@ -125,6 +137,13 @@ fn log_text(s: &Summary) -> String {
             for (i, d) in f.dests.iter().enumerate() {
                 let _ = writeln!(t, "          dest {}: {} {}", i + 1, d.hash, if d.ok { "ok" } else { tr(l, "different") });
             }
+        }
+    }
+    if !s.source_changes.is_empty() {
+        let _ = writeln!(t, "{}", "-".repeat(72));
+        let _ = writeln!(t, "{} ({})", tr(l, "src_changes"), s.source_changes.len());
+        for c in &s.source_changes {
+            let _ = writeln!(t, "  {c}");
         }
     }
     let skipped = s.total_files.saturating_sub(s.files.len());
@@ -257,6 +276,14 @@ fn pdf_report(s: &Summary) -> Vec<u8> {
         p.text(m, y, 7.5, Font::Bold, MUTED, &format!("{} {}", up("destination"), i + 1));
         p.text(m + 95.0, y, 9.0, Font::Mono, INK, &fit(&d.display().to_string(), 420.0, 9.0, Font::Mono));
     }
+    y += 15.0;
+    p.text(m, y, 7.5, Font::Bold, MUTED, &up("checks"));
+    for (i, line) in wrap(&checks_line(s), 88).iter().enumerate() {
+        if i > 0 {
+            y += 11.0;
+        }
+        p.text(m + 95.0, y, 8.5, Font::Regular, if s.uncached { INK } else { BAD }, line);
+    }
     if !j.notes.trim().is_empty() {
         y += 15.0;
         p.text(m, y, 7.5, Font::Bold, MUTED, &up("notes"));
@@ -321,6 +348,27 @@ fn pdf_report(s: &Summary) -> Vec<u8> {
             }
             p.text(m, y, 8.0, Font::Mono, INK, &fit(&f.rel, 330.0, 8.0, Font::Mono));
             p.text(m + 340.0, y, 8.0, Font::Regular, BAD, &fit(f.error.as_deref().unwrap_or(""), 175.0, 8.0, Font::Regular));
+            y += 12.0;
+        }
+    }
+    if !s.source_changes.is_empty() {
+        y += 16.0;
+        if y > H - 90.0 {
+            footer(&mut p, page, s);
+            p.new_page();
+            page += 1;
+            y = 50.0;
+        }
+        p.text(m, y, 9.0, Font::Bold, BAD, &format!("{} ({})", tr(l, "src_changes"), s.source_changes.len()));
+        y += 14.0;
+        for c in &s.source_changes {
+            if y > H - 70.0 {
+                footer(&mut p, page, s);
+                p.new_page();
+                page += 1;
+                y = 50.0;
+            }
+            p.text(m, y, 8.0, Font::Regular, INK, &fit(c, W - 2.0 * m, 8.0, Font::Regular));
             y += 12.0;
         }
     }

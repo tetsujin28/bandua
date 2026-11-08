@@ -38,6 +38,8 @@ header .sp{flex:1}
 .hbtn:hover{color:var(--text);border-color:var(--line2)}
 .algo{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
 .algo select{width:auto;padding:5px 8px}
+.reread{display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:6px;white-space:nowrap}
+.reread input{accent-color:var(--accent);margin:0;cursor:pointer}
 .lang{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .lang button{padding:5px 9px;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.5px}
 .lang button.on{background:var(--panel2);color:var(--accent)}
@@ -137,7 +139,7 @@ tr.active td{background:#1a1610}
 .log{border-top:1px solid var(--line);background:#0a0b0c;font-family:var(--mono);font-size:11.5px;overflow:auto;padding:8px 14px;user-select:text}
 .log div{white-space:pre-wrap;color:var(--muted)}
 .log .t{color:var(--dim);margin-right:8px}
-.log .ok{color:var(--ok)}.log .error,.log .fatal{color:var(--err)}.log .info{color:var(--text)}
+.log .ok{color:var(--ok)}.log .error,.log .fatal{color:var(--err)}.log .info{color:var(--text)}.log .warn{color:var(--warn)}
 
 /* barre basse */
 footer{display:flex;align-items:center;gap:12px;padding:0 18px;border-top:1px solid var(--line);background:#0b0c0e}
@@ -174,6 +176,7 @@ footer .msg{flex:1;color:var(--muted);font-size:12px}
         <option value="md5">MD5</option>
         <option value="sha1">SHA-1</option>
       </select>
+      <label class="reread" data-i18n-title="reread_title"><input type="checkbox" id="reread"><span data-i18n="reread"></span></label>
     </div>
     <button class="hbtn" id="reverifyBtn" data-i18n="reverify_btn" data-i18n-title="reverify_title"></button>
     <div class="lang" id="lang"><button data-l="fr">FR</button><button data-l="en">EN</button><button data-l="es">ES</button></div>

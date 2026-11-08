@@ -1,5 +1,5 @@
 //! Outil en ligne de commande pour tester le moteur sans interface.
-//! bandua-cli <source> <dest1> [dest2 ...] [--project X] [--day J01] [--camera A] [--card A001] [--algo xxh64|xxh3|md5|sha1]
+//! bandua-cli <source> <dest1> [dest2 ...] [--project X] [--day J01] [--camera A] [--card A001] [--algo xxh64|xxh3|md5|sha1] [--single-read]
 //! bandua-cli --verify <fichier.mhl>
 
 use bandua_core::{run, verify_mhl, Algo, Event, Job};
@@ -37,6 +37,7 @@ fn main() {
         notes: String::new(),
         algo: Algo::Xxh64,
         lang: "fr".into(),
+        source_reread: true,
     };
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -47,6 +48,7 @@ fn main() {
             "--card" => job.card = it.next().unwrap_or_default(),
             "--operator" => job.operator = it.next().unwrap_or_default(),
             "--notes" => job.notes = it.next().unwrap_or_default(),
+            "--single-read" => job.source_reread = false,
             "--lang" => job.lang = it.next().unwrap_or_else(|| "fr".into()),
             "--algo" => {
                 job.algo = match it.next().as_deref() {

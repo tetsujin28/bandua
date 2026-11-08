@@ -33,8 +33,10 @@ Rendez-vous sur la **[page des Releases](https://github.com/tetsujin28/bandua/re
 
 ## Ce que fait Bandua
 
-- **Lit la carte une seule fois** et écrit vers 1, 2 destinations ou plus en même temps.
-- **Vérifie chaque copie** en la relisant depuis le disque de destination et en comparant les hash (xxHash64 par défaut, XXH3, MD5 ou SHA-1). Un fichier ne prend son nom définitif qu'une fois vérifié.
+- **Copie en une seule passe** vers 1, 2 destinations ou plus en même temps.
+- **Vérifie chaque copie** en la relisant depuis le disque de destination et en comparant les hash (xxHash64 par défaut, XXH3, MD5 ou SHA-1). La relecture contourne le cache du système : c'est bien le disque qui est vérifié, pas une copie en mémoire. Un fichier ne prend son nom définitif qu'une fois vérifié.
+- **Relit la carte une seconde fois** (option activée par défaut) pour repérer un lecteur de cartes, un câble ou une carte défaillant.
+- **Surveille la carte pendant le déchargement** : un fichier qui change, apparaît ou disparaît fait échouer le déchargement, pour ne jamais formater une carte encore en cours d'écriture.
 - **Crée un dossier daté** dans chaque destination, par exemple `2026-11-06_1633_PROJET_J03_A_A003`.
 - **Copie la carte à l'identique** : RED (.RDM / .RDC), ARRI (ARRIRAW, MXF, ProRes), Blackmagic (BRAW), Sony, Canon, GoPro, DJI… sans les fichiers système parasites.
 - **Reconnaît les clips** pour les lister proprement dans le rapport (un dossier .RDC RED = un clip).

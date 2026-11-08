@@ -33,8 +33,10 @@ Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and
 
 ## What it does
 
-- **Reads the card once** and writes to 1, 2 or more destinations at the same time.
-- **Verifies every copy** by reading it back from the destination drive and comparing hashes (xxHash64 by default, XXH3, MD5 or SHA-1). A file only gets its final name once it is verified.
+- **Copies in a single pass** to 1, 2 or more destinations at the same time.
+- **Verifies every copy** by reading it back from the destination drive and comparing hashes (xxHash64 by default, XXH3, MD5 or SHA-1). The read-back bypasses the system cache, so the drive itself is checked, not a copy in memory. A file only gets its final name once it is verified.
+- **Reads the card a second time** (optional, on by default) to catch a faulty card reader, cable or card.
+- **Watches the card during the offload**: a file that changes, appears or disappears marks the offload as failed, so you never format a card that was still being written to.
 - **Creates a dated folder** on each destination, such as `2026-11-06_1633_PROJECT_D03_A_A003`.
 - **Copies the card exactly as it is**: RED (.RDM / .RDC), ARRI (ARRIRAW, MXF, ProRes), Blackmagic (BRAW), Sony, Canon, GoPro, DJI… without system junk files.
 - **Recognises clips** to list them properly in the report (one RED .RDC folder = one clip).
