@@ -463,8 +463,8 @@ function progress(e) {
   const pc = S.totalBytes ? copyBytes / S.totalBytes : 0, pv = S.totalBytes ? verBytes / (S.totalBytes * S.n) : 0;
   $("barCopy").style.width = pc * 100 + "%"; $("pCopy").textContent = Math.floor(pc * 100) + " %";
   $("barVerify").style.width = pv * 100 + "%"; $("pVerify").textContent = Math.floor(pv * 100) + " %";
-  // Le cercle montre la part de la carte déjà vérifiée : c'est le même chiffre que la barre bleue
-  const pr = Math.min(1, pv);
+  // Le cercle montre la part de la carte déjà copiée : c'est le même chiffre que la barre orange
+  const pr = Math.min(1, pc);
   $("pct").textContent = Math.floor(pr * 100);
   $("ringArc").style.strokeDashoffset = 414.69 * (1 - pr);
   const verifying = inFile > size;
