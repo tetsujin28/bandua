@@ -216,6 +216,36 @@ pub fn tr(lang: &str, key: &str) -> &'static str {
             "file not in the MHL, not verified: {p}",
             "archivo ausente del MHL, no verificado: {p}",
         ],
+        "rv_title" => ["RE-VÉRIFICATION", "RE-VERIFICATION", "REVERIFICACIÓN"],
+        "rv_intact" => ["INTACT", "INTACT", "INTACTO"],
+        "rv_result" => [
+            "{ok} identiques, {m} manquant(s), {d} abîmé(s)",
+            "{ok} identical, {m} missing, {d} damaged",
+            "{ok} idénticos, {m} faltan, {d} dañado(s)",
+        ],
+        "rv_all_ok" => [
+            "Tous les fichiers sont identiques au MHL",
+            "Every file is identical to the MHL",
+            "Todos los archivos son idénticos al MHL",
+        ],
+        "rv_extra_title" => [
+            "FICHIERS ABSENTS DU MHL",
+            "FILES NOT IN THE MHL",
+            "ARCHIVOS AUSENTES DEL MHL",
+        ],
+        "rv_missing" => ["manquant", "missing", "falta"],
+        "rv_damaged" => ["abîmé (hash différent)", "damaged (hash mismatch)", "dañado (hash diferente)"],
+        "rv_not_verified" => ["non vérifié", "not verified", "no verificado"],
+        "chk_rv_uncached" => [
+            "fichiers relus sur le disque (cache système contourné)",
+            "files re-read from disk (system cache bypassed)",
+            "archivos releídos del disco (caché del sistema evitada)",
+        ],
+        "chk_rv_cached" => [
+            "fichiers relus via le cache système (contournement impossible sur ce volume)",
+            "files re-read through the system cache (bypass unavailable on this volume)",
+            "archivos releídos a través de la caché del sistema (no se pudo evitar en este volumen)",
+        ],
         "msg_extra_more" => ["… et {n} autre(s)", "… and {n} more", "… y {n} más"],
         _ => ["?", "?", "?"],
     };

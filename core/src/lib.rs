@@ -180,6 +180,19 @@ pub struct ReverifyReport {
     pub extra: Vec<String>,
     pub cancelled: bool,
     pub ok: bool,
+    pub mhl: PathBuf,
+    pub algo: String,
+    pub started: DateTime<Local>,
+    pub finished: DateTime<Local>,
+    pub duration_s: f64,
+    pub total_bytes: u64,
+    /// Toutes les relectures ont contourné le cache du système
+    pub uncached: bool,
+    /// Rapport PDF et log écrits dans le dossier vérifié
+    pub reports: Vec<PathBuf>,
+    /// Résultat fichier par fichier (pour les rapports, pas envoyé à l'interface)
+    #[serde(skip)]
+    pub files: Vec<FileResult>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -797,6 +810,8 @@ pub fn reverify(
     emit: &mut dyn FnMut(Event),
 ) -> Result<ReverifyReport, String> {
     let lg = lang;
+    let started = Local::now();
+    let t0 = Instant::now();
     let txt = fs::read_to_string(mhl).map_err(|e| format!("{} : {e}", mhl.display()))?;
     let entries = parse_mhl(&txt)?;
     if entries.is_empty() {
@@ -838,6 +853,7 @@ pub fn reverify(
     let mut done = 0u64;
     let (mut checked, mut files_ok, mut missing, mut mismatched) = (0, 0, 0, 0);
     let mut errors = vec![];
+    let mut results: Vec<FileResult> = vec![];
     let mut cancelled = false;
     for (i, (e, &size)) in entries.iter().zip(&sizes).enumerate() {
         if cancel.load(Ordering::Relaxed) {
@@ -902,18 +918,17 @@ pub fn reverify(
             errors.push(m);
         }
         let missing_file = error.as_deref() == Some(tr(lg, "err_missing"));
-        emit(Event::FileResult {
-            index: i,
-            result: FileResult {
-                rel: e.rel.clone(),
-                size,
-                source_hash: e.hash.clone(),
-                dests: if missing_file { vec![] } else { vec![DestCheck { ok, hash: actual }] },
-                ok,
-                error,
-                uncached,
-            },
-        });
+        let result = FileResult {
+            rel: e.rel.clone(),
+            size,
+            source_hash: e.hash.clone(),
+            dests: if missing_file { vec![] } else { vec![DestCheck { ok, hash: actual }] },
+            ok,
+            error,
+            uncached,
+        };
+        emit(Event::FileResult { index: i, result: result.clone() });
+        results.push(result);
     }
 
     // Fichiers présents dans le dossier mais absents du MHL
@@ -952,7 +967,8 @@ pub fn reverify(
             fill(tr(lg, "msg_reverify_err"), &[("n", errors.len().to_string())])
         },
     });
-    let report = ReverifyReport {
+    let algos: std::collections::BTreeSet<&str> = entries.iter().map(|e| e.algo.label()).collect();
+    let mut report = ReverifyReport {
         folder: root,
         checked,
         total_files: entries.len(),
@@ -963,7 +979,24 @@ pub fn reverify(
         extra,
         cancelled,
         ok,
+        mhl: mhl.to_path_buf(),
+        algo: algos.into_iter().collect::<Vec<_>>().join(", "),
+        started,
+        finished: Local::now(),
+        duration_s: t0.elapsed().as_secs_f64().max(0.001),
+        total_bytes,
+        uncached: results.iter().any(|r| r.dests.len() == 1) && results.iter().filter(|r| r.dests.len() == 1).all(|r| r.uncached),
+        reports: vec![],
+        files: results,
     };
+    // Trace écrite dans le dossier vérifié (un disque en lecture seule n'est pas une erreur)
+    match report::write_reverify(&report, lg) {
+        Ok(p) => report.reports = p,
+        Err(e) => emit(Event::Log {
+            level: "warn".into(),
+            message: fill(tr(lg, "err_report"), &[("p", report.folder.display().to_string()), ("e", e)]),
+        }),
+    }
     emit(Event::ReverifyFinished { report: report.clone() });
     Ok(report)
 }
@@ -1164,6 +1197,11 @@ mod tests {
         assert!(!bad.ok);
         assert_eq!((bad.files_ok, bad.missing, bad.mismatched), (1, 1, 1));
         assert_eq!(bad.extra, vec!["ajout.txt".to_string()]);
+        assert_eq!(bad.reports.len(), 2);
+        assert!(bad.reports.iter().all(|p| p.exists()));
+        if std::env::var_os("BANDUA_KEEP").is_some() {
+            return; // garder les rapports pour les regarder
+        }
         let _ = fs::remove_dir_all(&root);
     }
 

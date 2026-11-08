@@ -3,7 +3,7 @@
 
 use crate::pdf::{fit, Font, Pdf, H, W};
 use crate::i18n::{date_fmt, fill, tr};
-use crate::{hb, Summary, APP_AUTHOR, APP_NAME, APP_VERSION};
+use crate::{hb, ReverifyReport, Summary, APP_AUTHOR, APP_NAME, APP_VERSION};
 use chrono::{DateTime, Local, TimeZone};
 use std::fmt::Write as _;
 use std::fs;
@@ -404,4 +404,155 @@ fn wrap(s: &str, width: usize) -> Vec<String> {
         lines.push(cur);
     }
     lines
+}
+
+// ---------------------------------------------------------------- RE-VÉRIFICATION
+
+/// Écrit `<mhl>_reverification_<date>.pdf` et `.txt` à côté du MHL.
+pub fn write_reverify(r: &ReverifyReport, lang: &str) -> Result<Vec<PathBuf>, String> {
+    let stem = r.mhl.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "bandua".into());
+    let word = if lang == "es" { "reverificacion" } else { "reverification" };
+    let base = format!("{stem}_{word}_{}", r.finished.format("%Y-%m-%d_%H%M%S"));
+    let mut out = vec![];
+    for (name, data) in [
+        (format!("{base}.pdf"), reverify_pdf(r, lang)),
+        (format!("{base}.txt"), reverify_log(r, lang).into_bytes()),
+    ] {
+        let p = r.folder.join(name);
+        fs::write(&p, data).map_err(|e| format!("{} : {e}", p.display()))?;
+        out.push(p);
+    }
+    Ok(out)
+}
+
+fn rv_status(r: &ReverifyReport, l: &str) -> &'static str {
+    tr(l, if r.cancelled { "cancelled" } else if r.ok { "rv_intact" } else { "errors" })
+}
+
+fn rv_rows(r: &ReverifyReport, l: &str) -> Vec<(String, String)> {
+    let df = date_fmt(l);
+    vec![
+        (tr(l, "folder").into(), r.folder.display().to_string()),
+        ("MHL".into(), r.mhl.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()),
+        (tr(l, "algorithm").into(), r.algo.clone()),
+        (tr(l, "start").into(), r.started.format(df).to_string()),
+        (
+            tr(l, "duration").into(),
+            format!("{} ({:.0} MB/s)", duration(r.duration_s), r.total_bytes as f64 / 1e6 / r.duration_s),
+        ),
+        (tr(l, "volume").into(), format!("{}, {} {}", hb(l, r.total_bytes), r.total_files, tr(l, "files"))),
+        (
+            tr(l, "result").into(),
+            fill(tr(l, "rv_result"), &[("ok", r.files_ok.to_string()), ("m", r.missing.to_string()), ("d", r.mismatched.to_string())]),
+        ),
+        (tr(l, "checks").into(), tr(l, if r.uncached { "chk_rv_uncached" } else { "chk_rv_cached" }).into()),
+    ]
+}
+
+fn reverify_log(r: &ReverifyReport, l: &str) -> String {
+    let (user, host) = user_host();
+    let mut t = String::new();
+    let _ = writeln!(t, "{APP_NAME} {APP_VERSION} - {} - by {APP_AUTHOR}", tr(l, "rv_title").to_lowercase());
+    let _ = writeln!(t, "{}", "=".repeat(72));
+    let _ = writeln!(t, "{:<18}: {}", tr(l, "status"), rv_status(r, l));
+    for (k, v) in rv_rows(r, l) {
+        let _ = writeln!(t, "{k:<18}: {v}");
+    }
+    if !user.is_empty() || !host.is_empty() {
+        let _ = writeln!(t, "{:<18}: {user}@{host}", tr(l, "machine"));
+    }
+    let _ = writeln!(t, "{}", "-".repeat(72));
+    let _ = writeln!(t, "{:<7} {:<16}  {:>15}  {}", tr(l, "status_col"), "HASH", tr(l, "bytes_col"), tr(l, "file_col"));
+    for f in &r.files {
+        let _ = writeln!(
+            t,
+            "{:<7} {:<16}  {:>15}  {}{}",
+            if f.ok { tr(l, "ok") } else { tr(l, "error") },
+            f.source_hash,
+            f.size,
+            f.rel,
+            f.error.as_ref().map(|e| format!("  <- {e}")).unwrap_or_default()
+        );
+    }
+    let skipped = r.total_files.saturating_sub(r.files.len());
+    if skipped > 0 {
+        let _ = writeln!(t, "{}", fill(tr(l, "not_processed"), &[("n", skipped.to_string())]));
+    }
+    if !r.extra.is_empty() {
+        let _ = writeln!(t, "{}", "-".repeat(72));
+        let _ = writeln!(t, "{} ({})", tr(l, "rv_extra_title"), r.extra.len());
+        for x in &r.extra {
+            let _ = writeln!(t, "  {x}");
+        }
+    }
+    let _ = writeln!(t, "{}", "-".repeat(72));
+    let _ = writeln!(t, "{}", tr(l, "disclaimer_short"));
+    t
+}
+
+fn reverify_pdf(r: &ReverifyReport, l: &str) -> Vec<u8> {
+    let mut p = Pdf::new();
+    let m = 40.0;
+    p.new_page();
+    p.rect(0.0, 0.0, W, 92.0, BAND);
+    p.rect(0.0, 92.0, W, 3.0, ACCENT);
+    p.text(m, 38.0, 9.0, Font::Bold, ACCENT, &format!("{} · {}", APP_NAME.to_uppercase(), tr(l, "rv_title")));
+    let name = r.folder.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    p.text(m, 66.0, 18.0, Font::Bold, WHITE, &fit(&name, 380.0, 18.0, Font::Bold));
+    let st = rv_status(r, l);
+    let bw = 104.0;
+    p.rect(W - m - bw, 46.0, bw, 26.0, if r.ok { OK } else { BAD });
+    p.text(W - m - bw + (bw - st.chars().count() as f32 * 7.0) / 2.0, 63.5, 11.0, Font::Bold, WHITE, st);
+
+    let mut y = 124.0;
+    let mut page = 1;
+    for (k, v) in rv_rows(r, l) {
+        p.text(m, y, 7.5, Font::Bold, MUTED, &k.to_uppercase());
+        let mono = k == tr(l, "folder") || k == "MHL";
+        let font = if mono { Font::Mono } else { Font::Regular };
+        p.text(m + 95.0, y, 9.0, font, INK, &fit(&v, 405.0, 9.0, font));
+        y += 16.0;
+    }
+
+    // Fichiers en défaut, sinon la liste complète tient en quelques pages
+    let bad: Vec<_> = r.files.iter().filter(|f| !f.ok).collect();
+    y += 16.0;
+    let title = if bad.is_empty() { tr(l, "rv_all_ok").to_string() } else { format!("{} ({})", tr(l, "files_in_error"), bad.len()) };
+    p.text(m, y, 9.0, Font::Bold, if bad.is_empty() { OK } else { BAD }, &title);
+    y += 16.0;
+    let line = |p: &mut Pdf, y: &mut f32, page: &mut usize, left: &str, right: &str, col: (f32, f32, f32)| {
+        if *y > H - 70.0 {
+            rv_footer(p, *page, r, l);
+            p.new_page();
+            *page += 1;
+            *y = 50.0;
+        }
+        p.text(m, *y, 8.0, Font::Mono, INK, &fit(left, 330.0, 8.0, Font::Mono));
+        p.text(m + 340.0, *y, 8.0, Font::Regular, col, &fit(right, 175.0, 8.0, Font::Regular));
+        *y += 12.0;
+    };
+    for f in &bad {
+        let why = tr(l, if f.dests.is_empty() { "rv_missing" } else { "rv_damaged" });
+        line(&mut p, &mut y, &mut page, &f.rel, why, BAD);
+    }
+    if !r.extra.is_empty() {
+        y += 10.0;
+        p.text(m, y, 9.0, Font::Bold, MUTED, &format!("{} ({})", tr(l, "rv_extra_title"), r.extra.len()));
+        y += 14.0;
+        for x in &r.extra {
+            line(&mut p, &mut y, &mut page, x, tr(l, "rv_not_verified"), MUTED);
+        }
+    }
+    rv_footer(&mut p, page, r, l);
+    p.render()
+}
+
+fn rv_footer(p: &mut Pdf, page: usize, r: &ReverifyReport, l: &str) {
+    p.line(40.0, H - 46.0, W - 40.0, H - 46.0, RULE, 0.5);
+    p.text(40.0, H - 34.0, 7.5, Font::Bold, MUTED, &format!(
+        "{APP_NAME} {APP_VERSION}  ·  by {APP_AUTHOR}  ·  {}",
+        r.finished.format("%d/%m/%Y %H:%M")
+    ));
+    p.text(40.0, H - 22.0, 6.8, Font::Regular, MUTED, tr(l, "disclaimer_short"));
+    p.text(W - 75.0, H - 34.0, 7.5, Font::Regular, MUTED, &format!("{} {page}", tr(l, "page")));
 }

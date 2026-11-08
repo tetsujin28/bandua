@@ -132,7 +132,8 @@ function demoBackend() {
         if (cancelled || i >= files.length) {
           clearInterval(timer);
           handler({ type: "reverify_finished", report: { checked: i, total_files: files.length, files_ok: ok, missing: 0, mismatched: errors.length,
-            errors, extra: [], cancelled, ok: !cancelled && !errors.length } });
+            errors, extra: [], cancelled, ok: !cancelled && !errors.length, folder: "/Volumes/RAID_PROD/2026-11-05_1802_DUE_VOLTI_J02_A_A002",
+            reports: ["/Volumes/RAID_PROD/2026-11-05_1802_DUE_VOLTI_J02_A_A002/rapport.pdf"] } });
         }
       }, 80);
     },
@@ -218,8 +219,9 @@ function init() {
   $("src").onclick = chooseSource;
   $("addDest").onclick = addDest;
   $("go").onclick = () => (S.running ? cancel() : S.summary && lastOk() ? newOffload() : start());
-  $("openPdf").onclick = () => { const r = S.summary?.reports?.find((x) => x.endsWith(".pdf")); r && api.open(r); };
-  $("reveal").onclick = () => S.summary?.dest_dirs?.[0] && api.reveal(S.summary.dest_dirs[0]);
+  // Rapport et dossier du dernier déchargement, ou de la dernière re-vérification
+  $("openPdf").onclick = () => { const r = (S.summary || S.rvReport)?.reports?.find((x) => x.endsWith(".pdf")); r && api.open(r); };
+  $("reveal").onclick = () => { const d = S.summary?.dest_dirs?.[0] || S.rvReport?.folder; d && api.reveal(d); };
   $("reverifyBtn").onclick = reverify;
   $("aboutBtn").onclick = () => showAbout(false);
   document.querySelectorAll("#lang button").forEach((b) => (b.onclick = () => setLang(b.dataset.l)));
@@ -601,6 +603,7 @@ function finishReverify(r) {
   $("phase").textContent = t(ok ? "ph_verified" : r.cancelled ? "ph_cancelled" : "ph_errors");
   $("cur").textContent = "";
   S.rvReport = r; $("footMsg").textContent = rvMsg(r);
+  if (r.reports?.length) ["openPdf", "reveal"].forEach((b) => $(b).classList.remove("hide"));
   // Amène le premier clip en erreur à l'écran
   const bad = S.clipState.findIndex((st) => st[0] === "err");
   if (bad >= 0) $("clip" + bad)?.scrollIntoView({ block: "center", behavior: "smooth" });
