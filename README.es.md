@@ -10,7 +10,7 @@
 
 Bandua vuelca tus tarjetas de cámara a varios discos a la vez, verifica cada copia frente al origen mediante un hash y genera un log, un MHL y un informe PDF para entregar al montador o al laboratorio.
 
-Gratuito, para Windows, macOS y Linux. Interfaz e informes en español, inglés y francés.
+Gratuito, para Windows y macOS. Interfaz e informes en español, inglés y francés.
 
 > Bandua es una divinidad protectora del oeste de la península ibérica. Aquí, vela por tu material.
 
@@ -25,7 +25,6 @@ Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)**
 | Windows (sin instalación) | `Bandua_x.y.z_portable.exe` |
 | Windows (instalador) | `Bandua_x.y.z_x64-setup.exe` o `.msi` |
 | macOS (Intel y Apple Silicon) | `Bandua_x.y.z_universal.dmg` |
-| Linux | `.AppImage` o `.deb` |
 
 **Primer arranque.** La aplicación todavía no está firmada, así que tu sistema mostrará un aviso una sola vez:
 - **Windows**: haz clic en «Más información» y después en «Ejecutar de todas formas».
@@ -73,7 +72,7 @@ cargo tauri dev      # ejecutar
 cargo tauri build    # generar los instaladores
 ```
 
-Cada Release publicada genera automáticamente los archivos para Windows, macOS y Linux con GitHub Actions.
+Cada Release publicada genera automáticamente los archivos para Windows y macOS con GitHub Actions.
 
 Estructura del proyecto: `core/` (motor de copia, hash e informes, en Rust), `src-tauri/` (aplicación de escritorio), `ui/` (interfaz, HTML/CSS/JS sin framework).
 

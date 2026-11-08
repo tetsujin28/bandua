@@ -5,7 +5,7 @@ Dernière mise à jour : 8 novembre 2026 (fiabilité V0.2).
 
 ## Le projet
 
-Bandua est mon application gratuite de déchargement de rushes, pour Windows, macOS et Linux. Elle copie une carte caméra vers un ou plusieurs disques en une seule lecture, vérifie chaque copie par hash et produit un rapport PDF, un log, un MHL et un JSON.
+Bandua est mon application gratuite de déchargement de rushes, pour Windows et macOS. Elle copie une carte caméra vers un ou plusieurs disques en une seule lecture, vérifie chaque copie par hash et produit un rapport PDF, un log, un MHL et un JSON.
 
 Je l'ai d'abord appelée Offload, puis Bandua, du nom d'une divinité protectrice de l'ouest de la péninsule Ibérique. Son nom évoquerait le « lien », peut-être aussi le passage, ce qui colle bien à une appli qui fait passer les rushes d'un support à l'autre en les protégeant.
 
@@ -74,7 +74,7 @@ Il me faudra une bio, une photo, l'adresse du site (GitHub Pages ou mon propre d
 
 ## Face à ShotPut Pro
 
-ShotPut Pro est bien plus mûr : vignettes et métadonnées, automatisation, presets, pause, contrôles de la source, ASC MHL v2, et surtout vingt ans de confiance des productions. Bandua a d'autres atouts : il est gratuit, open source, disponible sous Linux, sans compte ni licence, traduit en français, et simple.
+ShotPut Pro est bien plus mûr : vignettes et métadonnées, automatisation, presets, pause, contrôles de la source, ASC MHL v2, et surtout vingt ans de confiance des productions. Bandua a d'autres atouts : il est gratuit, open source, sans compte ni licence, traduit en français, et simple.
 
 Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Bandua devienne l'outil gratuit et sérieux des petites équipes, des courts métrages, des indépendants et des étudiants, qui copient encore trop souvent leurs cartes à la main sans aucune vérification.
 
@@ -99,6 +99,7 @@ Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Ba
 - **Tauri 2 et Rust**, avec une interface en HTML, CSS et JavaScript sans npm
 - **Des exécutables prêts à l'emploi** : personne n'a besoin d'installer Rust. L'appli n'est pas encore signée, l'avertissement au premier lancement me convient pour l'instant
 - **L'anglais en premier sur GitHub**, avec des traductions séparées pour le README et repliées dans les notes de version
+- **Pas de version Linux pour l'instant** (décidé le 8 novembre 2026) : je ne peux pas la tester moi-même. Le code reste compatible Linux, il suffira de remettre Linux dans `build.yml` et dans les README le jour où je pourrai la valider.
 - **Le code libre (MIT)**, avec une clause claire sur ma non-responsabilité en cas de perte de données
 
 ## Organisation du code
@@ -116,7 +117,7 @@ core/        moteur Rust (bandua-core) : copie, hash, clips, rapports, traductio
 src-tauri/   application de bureau Tauri 2
 ui/          interface (index.html, i18n.js, app.js), utilisable aussi en mode démo dans un navigateur
 docs/        ce document et les captures d'écran
-.github/workflows/build.yml  fabrication Windows, macOS universel et Linux
+.github/workflows/build.yml  fabrication Windows et macOS universel
 ```
 
 ## Aide-mémoire

@@ -10,7 +10,7 @@
 
 Bandua offloads camera cards to several drives at once, checks every copy against the source with a hash, and writes a log, an MHL and a PDF report you can hand to the editor or the lab.
 
-Free, for Windows, macOS and Linux. Interface and reports in English, French and Spanish.
+Free, for Windows and macOS. Interface and reports in English, French and Spanish.
 
 > Bandua is a protective deity of the western Iberian Peninsula. Here, it watches over your footage.
 
@@ -25,7 +25,6 @@ Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and
 | Windows (no install) | `Bandua_x.y.z_portable.exe` |
 | Windows (installer) | `Bandua_x.y.z_x64-setup.exe` or `.msi` |
 | macOS (Intel and Apple Silicon) | `Bandua_x.y.z_universal.dmg` |
-| Linux | `.AppImage` or `.deb` |
 
 **First launch.** The app is not signed yet, so your system will warn you once:
 - **Windows**: click "More info", then "Run anyway".
@@ -73,7 +72,7 @@ cargo tauri dev      # run
 cargo tauri build    # build installers
 ```
 
-Every published Release builds the Windows, macOS and Linux files automatically with GitHub Actions.
+Every published Release builds the Windows and macOS files automatically with GitHub Actions.
 
 Project layout: `core/` (copy, hash, reports engine, in Rust), `src-tauri/` (desktop app), `ui/` (interface, plain HTML/CSS/JS).
 
