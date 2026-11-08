@@ -1,7 +1,7 @@
 # Bandua : où j'en suis et ce qui vient
 
 Mes notes de travail sur Bandua : l'état du projet, mes choix et la suite.
-Dernière mise à jour : 8 novembre 2026 (v0.2.0 fusionnée).
+Dernière mise à jour : 8 novembre 2026 (v0.2.0 publiée).
 
 ## Le projet
 
@@ -13,7 +13,7 @@ C'est l'application sœur d'**Ataecina**, mon outil de récupération et de rép
 
 - Dépôt : https://github.com/tetsujin28/bandua (public)
 - Site : https://tetsujin28.github.io
-- Version publiée : v0.1.0 (pré-version bêta). La v0.2.0 est fusionnée dans `main`, sa Release reste à publier.
+- Version publiée : v0.2.0 (pré-version bêta, 8 novembre 2026)
 
 ## Feuille de route, par ordre de priorité
 
