@@ -33,6 +33,12 @@ const fmtTime = (s) => {
 };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+// Petit libellé au-dessus du pourcentage (reste juste lors d'un changement de langue)
+function ringLabel(key) {
+  const el = $("ringLbl");
+  el.dataset.i18n = key; el.textContent = t(key);
+}
+
 function applyLang() {
   document.documentElement.lang = LANG;
   document.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
@@ -360,7 +366,7 @@ function setClip(k, state, frac = 0) {
 // ------------------------------------------------------------------ Déchargement
 
 function resetDashboard() {
-  $("pct").textContent = "0"; $("phase").textContent = t("waiting");
+  $("pct").textContent = "0"; $("phase").textContent = t("waiting"); ringLabel("ring_label");
   $("ringArc").style.strokeDashoffset = 414.69; $("ringArc").style.stroke = "var(--accent)";
   ["speed", "eta", "elapsed"].forEach((id) => ($(id).textContent = "-"));
   $("filesDone").textContent = S.info ? `0/${S.info.total_files}` : "-";
@@ -469,7 +475,9 @@ function progress(e) {
   $("ringArc").style.strokeDashoffset = 414.69 * (1 - pr);
   const verifying = inFile > size;
   const rereading = S.reread && inFile > size * (1 + S.nDest);
-  $("phase").textContent = t(rereading ? "ph_source" : verifying ? "ph_verify" : "ph_copy");
+  // Copie terminée mais vérification en cours : on le dit clairement, la carte ne doit pas être retirée
+  if (pc >= 1) { ringLabel("ring_verifying"); $("phase").textContent = t("ph_wait"); }
+  else $("phase").textContent = t(rereading ? "ph_source" : verifying ? "ph_verify" : "ph_copy");
   setChip("run", verifying ? "chip_verify" : "chip_copy");
   $("speed").innerHTML = rate ? `${Math.round(rate / 1e6)}<small style="font-size:11px;color:var(--muted)"> ${esc(t("mbs"))}</small>` : "-";
   $("eta").textContent = rate ? fmtTime((e.total - e.done) / rate) : "-";
@@ -484,6 +492,7 @@ function progress(e) {
 function finishTexts(sum) {
   const ok = lastOk();
   $("phase").textContent = t(ok ? "ph_verified" : sum.cancelled ? "ph_cancelled" : "ph_errors");
+  ringLabel(ok ? "ring_done" : "ring_label");
   $("cur").innerHTML = ok ? `<b>${esc(sum.folder_name)}</b>  ${esc(t("cur_done"))}` : "";
   $("footMsg").textContent = ok ? t("done_msg", { n: sum.files_ok, d: sum.dest_dirs.length, r: Math.round(sum.avg_mb_s) })
     : sum.cancelled ? t("cancelled_msg") : sum.files_failed ? t("errors_msg", { n: sum.files_failed }) : t("src_changed_msg");
