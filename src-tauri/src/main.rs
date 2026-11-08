@@ -21,9 +21,20 @@ struct DiskInfo {
     free: Option<u64>,
 }
 
+/// Choix d'un dossier. `start` : dernier dossier choisi pour ce rôle (source ou
+/// destination) ; la fenêtre s'ouvre dans son dossier parent, pour que la carte
+/// suivante ou un autre disque soit visible tout de suite.
 #[tauri::command]
-async fn pick_folder(app: AppHandle) -> Option<String> {
-    app.dialog().file().blocking_pick_folder().map(|p| p.to_string())
+async fn pick_folder(app: AppHandle, start: Option<String>) -> Option<String> {
+    let mut dialog = app.dialog().file();
+    if let Some(s) = start.filter(|s| !s.is_empty()) {
+        let p = PathBuf::from(s);
+        let dir = p.parent().filter(|d| d.is_dir()).map(|d| d.to_path_buf()).unwrap_or(p);
+        if dir.is_dir() {
+            dialog = dialog.set_directory(dir);
+        }
+    }
+    dialog.blocking_pick_folder().map(|p| p.to_string())
 }
 
 #[tauri::command]

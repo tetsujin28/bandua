@@ -58,7 +58,7 @@ function tauriBackend() {
   const { listen } = window.__TAURI__.event;
   return {
     demo: false, clockScale: 1,
-    pickFolder: () => invoke("pick_folder"),
+    pickFolder: (kind) => invoke("pick_folder", { start: store.get(kind === "source" ? "lastSource" : "lastDest", null) }),
     pickMhl: () => invoke("pick_mhl"),
     scan: (path) => invoke("scan_source", { path }),
     disk: (path) => invoke("disk_info", { path }),
@@ -244,6 +244,7 @@ async function chooseSource() {
   if (S.running) return;
   const p = await api.pickFolder("source");
   if (!p) return;
+  store.set("lastSource", p);
   if (S.summary) resetView();
   if (S.dests.some((d) => d.path === p)) return log("error", t("already_dest"));
   S.source = p; S.info = null; S.srcState = "loading"; renderSource();
@@ -266,6 +267,7 @@ async function addDest() {
   if (S.running) return;
   const p = await api.pickFolder("dest");
   if (!p) return;
+  store.set("lastDest", p);
   if (p === S.source) return log("error", t("same_as_src"));
   if (S.dests.some((d) => d.path === p)) return;
   const d = { path: p, free: null };
@@ -283,13 +285,16 @@ function renderDests() {
     const pct = d.free ? Math.min(100, (need / d.free) * 100) : 0;
     const txt = d.free == null ? t("free_unknown")
       : t("free", { free: fmtBytes(d.free) }) + (need ? t("occupies", { p: num(pct.toFixed(pct < 1 ? 2 : 0)) }) : "") + (low ? t("low_space") : "");
-    return `<div class="dest"><div class="n">${k + 1}</div><div>
+    const done = S.summary?.dest_dirs?.[k];
+    return `<div class="dest${done ? " open" : ""}" data-k="${k}"${done ? ` title="${esc(t("open_dest"))}"` : ""}><div class="n">${k + 1}</div><div>
         <div class="path">${esc(d.path)}</div>
         <div class="free ${low ? "low" : ""}"><span style="width:${low ? 100 : pct}%"></span></div>
         <div class="freetxt">${esc(txt)}</div>
       </div><button class="x" data-k="${k}" title="${esc(t("remove"))}">×</button></div>`;
   }).join("");
-  $("dests").querySelectorAll(".x").forEach((b) => (b.onclick = () => { if (!S.running) { S.dests.splice(+b.dataset.k, 1); renderDests(); refresh(); } }));
+  $("dests").querySelectorAll(".x").forEach((b) => (b.onclick = (ev) => { ev.stopPropagation(); if (!S.running) { S.dests.splice(+b.dataset.k, 1); renderDests(); refresh(); } }));
+  // Après un déchargement, un clic sur une destination ouvre le dossier copié
+  $("dests").querySelectorAll(".dest.open").forEach((el) => (el.onclick = () => api.open(S.summary.dest_dirs[+el.dataset.k])));
 }
 
 function folderName() {
@@ -388,7 +393,7 @@ async function start() {
     source_reread: $("reread").checked,
     ...Object.fromEntries(FIELDS.map((f) => [f, $(f).value.trim()])),
   };
-  S.summary = null; $("banner").innerHTML = "";
+  S.summary = null; $("banner").innerHTML = ""; renderDests();
   ["openPdf", "reveal"].forEach((b) => $(b).classList.add("hide"));
   buildClipTable();
   resetDashboard();
@@ -485,6 +490,7 @@ function finishTexts(sum) {
 
 function finish(sum) {
   S.running = false; S.cancelArmed = 0; S.summary = sum; refresh();
+  renderDests();
   const ok = lastOk();
   setChip(ok ? "ok" : "err", ok ? "chip_verified" : sum.cancelled ? "chip_cancelled" : "chip_errors");
   $("ringArc").style.stroke = ok ? "var(--ok)" : "var(--err)";

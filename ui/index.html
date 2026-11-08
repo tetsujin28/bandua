@@ -81,6 +81,7 @@ h3 small{letter-spacing:0;text-transform:none;font-weight:500;color:var(--dim)}
 
 .dest{display:grid;grid-template-columns:22px 1fr 22px;gap:8px;align-items:center;padding:10px;background:var(--panel);
   border:1px solid var(--line);border-radius:9px;margin-bottom:7px}
+.dest.open{cursor:pointer;transition:.15s}.dest.open:hover{border-color:var(--ok)}
 .dest .n{width:22px;height:22px;border-radius:5px;background:var(--panel2);display:grid;place-items:center;font-size:11px;color:var(--muted);font-weight:700}
 .dest .x{color:var(--dim);font-size:16px}.dest .x:hover{color:var(--err)}
 .free{height:4px;border-radius:3px;background:var(--line);margin-top:6px;overflow:hidden;position:relative}
@@ -101,8 +102,9 @@ label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
 .ring{width:150px;height:150px;position:relative}
 .ring svg{transform:rotate(-90deg)}
 .ring .pct{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.ring .pct>div{max-width:104px}
 .ring .pct b{font-size:34px;font-weight:300;font-family:var(--mono);letter-spacing:-1px}
-.ring .pct small{display:block;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:-4px}
+.ring .pct small{display:block;font-size:9.5px;letter-spacing:.8px;line-height:1.25;color:var(--muted);text-transform:uppercase;margin-top:-2px}
 .ring .pct small.lbl{font-size:8.5px;color:var(--dim);margin:0 0 2px}
 .ring .pct b i{font-style:normal;font-size:16px;color:var(--muted);margin-left:2px;letter-spacing:0}
 .box h2 .vtag{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent);border:1px solid var(--line2);border-radius:5px;padding:2px 7px;margin-left:8px;vertical-align:4px}
