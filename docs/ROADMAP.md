@@ -1,7 +1,7 @@
 # Bandua : où j'en suis et ce qui vient
 
 Mes notes de travail sur Bandua : l'état du projet, mes choix et la suite.
-Dernière mise à jour : 8 novembre 2026 (fiabilité V0.2).
+Dernière mise à jour : 8 novembre 2026 (v0.2.0 fusionnée).
 
 ## Le projet
 
@@ -11,25 +11,31 @@ Je l'ai d'abord appelée Offload, puis Bandua, du nom d'une divinité protectric
 
 C'est l'application sœur d'**Ataecina**, mon outil de récupération et de réparation de rushes.
 
-- Dépôt : https://github.com/tetsujin28/bandua (privé pour l'instant)
-- Version actuelle : v0.1.0, publiée en pré-version bêta
+- Dépôt : https://github.com/tetsujin28/bandua (public)
+- Site : https://tetsujin28.github.io
+- Version publiée : v0.1.0 (pré-version bêta). La v0.2.0 est fusionnée dans `main`, sa Release reste à publier.
 
 ## Feuille de route, par ordre de priorité
 
-### 1. Fiabilité (V0.2) : la base de tout ✅ codé, à éprouver sur le terrain
+### 1. Fiabilité (V0.2) : la base de tout ✅ fait
 Une appli de déchargement qui n'est pas irréprochable ne sert à rien. C'est la priorité absolue.
 - ✅ Relire les copies sans passer par le cache du système, pour que la vérification se fasse vraiment sur le disque : FILE_FLAG_NO_BUFFERING sous Windows, F_NOCACHE sous macOS (en lecture et en écriture, après F_FULLFSYNC), posix_fadvise(DONTNEED) après synchronisation sous Linux. Tampon aligné, lectures bornées à la taille attendue (un fichier trop court ou trop long est une erreur). Si un volume refuse le contournement, le log et le PDF le disent.
 - ✅ Relire la source une seconde fois, pour repérer un lecteur de cartes ou un câble qui flanche. Option « Relire la carte », activée par défaut. Si les deux lectures diffèrent, les copies sont marquées `.HASH_ERREUR`.
 - ✅ Détecter une source qui change pendant la copie : taille et date de chaque fichier contrôlées avant et après sa copie, puis nouvel inventaire de la carte à la fin (fichiers apparus, disparus ou modifiés). Le moindre changement fait échouer le déchargement.
 - ✅ Plus aucun fichier `.bandua-part` laissé derrière en cas d'erreur d'écriture
 - ✅ Tests automatiques des pannes simulées : lecteur instable, fichier modifié avant ou après sa copie, fichier apparu en cours de route
-- Reste à faire : valider sur Windows et macOS avec de vraies cartes (point 2)
+- ✅ Re-vérification d'un MHL avec le même tableau de bord qu'un déchargement : progression, statut de chaque clip (vérifié, abîmé, manquant), annulation, fichiers absents du MHL signalés, rapport PDF et log écrits dans le dossier
+- ✅ Interface plus claire : cercle « copié » qui suit la barre orange puis « vérification / patientez » et « terminé / vérifié » en vert, un seul mot sous le pourcentage, compteur de fichiers dès l'analyse, version dans « À propos », clic sur une destination pour ouvrir le dossier copié
+- Pistes écartées pour l'instant, à rouvrir si les tests le justifient :
+  - macOS : mesurer avec `mincore` ce qui reste en cache et l'invalider avec `msync`, plus une option « vérification stricte » qui démonte et remonte le disque
+  - tout copier puis tout vérifier, en relisant les disques et la carte en parallèle (environ deux fois plus rapide avec deux disques et la relecture de la carte)
 
 ### 2. Tests en conditions réelles
 Avant de faire connaître Bandua, il doit avoir fait ses preuves.
 - Décharger de vraies cartes de mes caméras : RED, ARRI, Blackmagic, et quelques caméras moins pro
 - Provoquer les pannes : débrancher un disque en pleine copie, remplir un disque, corrompre un fichier, et vérifier que Bandua réagit comme il faut
 - Faire tester une bêta à quelques collègues
+- Remettre Linux le jour où je pourrai le tester
 
 ### 3. Trier les fonctionnalités
 Mon expérience du plateau me dit qu'une partie de ce que proposent les logiciels du marché ne sert pas. Je dois faire le tri entre ce qui est inutile, ce qui est indispensable et ce qui manque, avant d'aller plus loin. Mes premiers doutes : l'intégration Frame.io ou cloud, le démarrage automatique à l'insertion d'une carte (trop risqué), la santé des disques (SMART) et les notifications sur téléphone.
@@ -50,8 +56,9 @@ Mon expérience du plateau me dit qu'une partie de ce que proposent les logiciel
 - ASC MHL v2
 
 ### 7. Sortie publique
-- Passer le dépôt en public
-- Créer le site de Bandua (voir plus bas)
+- ✅ Passer le dépôt en public
+- ✅ Créer le site (tetsujin28.github.io, commun avec Ataecina)
+- Signer l'application, pour que Windows (SmartScreen), Firefox et macOS (Gatekeeper) cessent de la signaler comme dangereuse. Firefox a déjà bloqué une fabrication de test. Pistes : SignPath Foundation (gratuit pour l'open source, sur dossier) ou le service de signature de Microsoft pour Windows, le compte Apple Developer (99 $ par an) pour macOS.
 
 ### 8. Plus tard, si le besoin se confirme
 - Copies en cascade (vers un SSD rapide d'abord, puis vers les autres disques)
@@ -78,14 +85,15 @@ ShotPut Pro est bien plus mûr : vignettes et métadonnées, automatisation, pre
 
 Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Bandua devienne l'outil gratuit et sérieux des petites équipes, des courts métrages, des indépendants et des étudiants, qui copient encore trop souvent leurs cartes à la main sans aucune vérification.
 
-## Ce qui existe déjà (v0.1.0)
+## Ce qui existe déjà (v0.2.0)
 
 - Copie vers plusieurs destinations en une lecture, vérification par relecture, contrôle de l'espace libre
+- Relecture des copies sans le cache système, carte lue deux fois (option), carte surveillée pendant le déchargement
 - Écriture en `.bandua-part`, renommage seulement si le hash correspond, sinon `.HASH_ERREUR`
 - Dossier daté `AAAA-MM-JJ_HHMM_PROJET_JOUR_CAMERA_CARTE` dans chaque destination, fichiers système ignorés, dates de modification d'origine conservées
 - Reconnaissance des clips par marque (un .RDC RED, un dossier ARRIRAW, un .braw…)
 - Rapports PDF, log, MHL 1.1 et JSON dans la langue de l'interface (`_rapport.pdf`, `_report.pdf`, `_informe.pdf`)
-- Re-vérification d'un dossier à partir de son MHL
+- Re-vérification d'un dossier à partir de son MHL, avec progression, statut par clip et rapport PDF
 - Interface sombre en français, anglais et espagnol, avec changement de langue à chaud
 - Bouton « Nouveau déchargement » après succès, « Relancer cette carte » après erreur ou annulation, annulation par double clic
 - Avertissement de non-responsabilité à accepter au premier lancement, rappelé dans À propos, sur chaque PDF et à la fin du log
@@ -97,7 +105,7 @@ Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Ba
 ## Mes choix
 
 - **Tauri 2 et Rust**, avec une interface en HTML, CSS et JavaScript sans npm
-- **Des exécutables prêts à l'emploi** : personne n'a besoin d'installer Rust. L'appli n'est pas encore signée, l'avertissement au premier lancement me convient pour l'instant
+- **Des exécutables prêts à l'emploi** : personne n'a besoin d'installer Rust. L'appli n'est pas encore signée, l'avertissement au premier lancement me convenait, mais les alertes des navigateurs posent la question de la signature (voir le point 7)
 - **L'anglais en premier sur GitHub**, avec des traductions séparées pour le README et repliées dans les notes de version
 - **Pas de version Linux pour l'instant** (décidé le 8 novembre 2026) : je ne peux pas la tester moi-même. Le code reste compatible Linux, il suffira de remettre Linux dans `build.yml` et dans les README le jour où je pourrai la valider.
 - **Le code libre (MIT)**, avec une clause claire sur ma non-responsabilité en cas de perte de données
