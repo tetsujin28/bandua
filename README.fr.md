@@ -56,6 +56,8 @@ Votre navigateur peut aussi signaler le téléchargement comme inhabituel ou dan
 
 Pour contrôler un disque plus tard (avant de formater une carte ou à la livraison d'un disque), cliquez sur **Re-vérifier un MHL** et choisissez le fichier `.mhl` du dossier daté.
 
+Le **[mode d'emploi détaillé](docs/GUIDE.fr.md)** décrit chaque écran, les rapports, la re-vérification et la conduite à tenir en cas d'erreur.
+
 ## Captures d'écran
 
 <table>

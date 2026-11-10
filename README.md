@@ -56,6 +56,8 @@ Your browser may also flag the download as unusual or dangerous: this is common 
 
 To check a drive later (before formatting a card, or when delivering a drive), click **Re-verify an MHL** and pick the `.mhl` file in the dated folder.
 
+The **[full user guide](docs/GUIDE.md)** walks through every screen, the reports, re-verification and what to do when something goes wrong.
+
 ## Screenshots
 
 <table>

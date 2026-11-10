@@ -56,6 +56,8 @@ Tu navegador también puede marcar la descarga como inusual o peligrosa: es habi
 
 Para comprobar un disco más tarde (antes de formatear una tarjeta o al entregar un disco), haz clic en **Reverificar un MHL** y elige el archivo `.mhl` de la carpeta con fecha.
 
+El **[manual de uso completo](docs/GUIDE.es.md)** describe cada pantalla, los informes, la reverificación y qué hacer en caso de error.
+
 ## Capturas de pantalla
 
 <table>
