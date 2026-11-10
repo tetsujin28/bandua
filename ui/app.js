@@ -104,15 +104,15 @@ function demoBackend() {
   return {
     demo: true, clockScale: SCALE,
     pickFolder: async (kind) => (kind === "source" ? `/Volumes/A00${3 + srcPicks++}_RED` : destPool[destPicks++ % destPool.length]),
-    pickMhl: async () => "/Volumes/RAID_PROD/2026-11-05_1802_DUE_VOLTI_J02_A_A002/2026-11-05_1802_DUE_VOLTI_J02_A_A002.mhl",
+    pickMhl: async () => "/Volumes/RAID_PROD/2026-11-05_1802_BLADE_RUNNER_J02_A_A002/2026-11-05_1802_BLADE_RUNNER_J02_A_A002.mhl",
     scan: async (path) => { const c = redCard(path); return { source: path, total_files: c.files.length, ...c }; },
     disk: async (path) => ({ path, free: freeMap[path] ?? 900_000_000_000 }),
     // Démo : re-vérification d'un dossier RED, avec un fichier abîmé pour montrer l'alerte
     reverify: async () => {
       const info = redCard("/Volumes/RAID_PROD/A002"), files = info.files, total = info.total_bytes;
       cancelled = false;
-      handler({ type: "reverify", info: { source: "/Volumes/RAID_PROD/2026-11-05_1802_DUE_VOLTI_J02_A_A002", total_files: files.length, ...info } });
-      handler({ type: "started", total_files: files.length, total_bytes: total, work_bytes: total, folder_name: "2026-11-05_1802_DUE_VOLTI_J02_A_A002" });
+      handler({ type: "reverify", info: { source: "/Volumes/RAID_PROD/2026-11-05_1802_BLADE_RUNNER_J02_A_A002", total_files: files.length, ...info } });
+      handler({ type: "started", total_files: files.length, total_bytes: total, work_bytes: total, folder_name: "2026-11-05_1802_BLADE_RUNNER_J02_A_A002" });
       let i = 0, inFile = 0, done = 0, ok = 0; const errors = [], bad = 9;
       handler({ type: "file", index: 0, rel: files[0].rel, size: files[0].size });
       timer = setInterval(() => {
@@ -132,8 +132,8 @@ function demoBackend() {
         if (cancelled || i >= files.length) {
           clearInterval(timer);
           handler({ type: "reverify_finished", report: { checked: i, total_files: files.length, files_ok: ok, missing: 0, mismatched: errors.length,
-            errors, extra: [], cancelled, ok: !cancelled && !errors.length, folder: "/Volumes/RAID_PROD/2026-11-05_1802_DUE_VOLTI_J02_A_A002",
-            reports: ["/Volumes/RAID_PROD/2026-11-05_1802_DUE_VOLTI_J02_A_A002/rapport.pdf"] } });
+            errors, extra: [], cancelled, ok: !cancelled && !errors.length, folder: "/Volumes/RAID_PROD/2026-11-05_1802_BLADE_RUNNER_J02_A_A002",
+            reports: ["/Volumes/RAID_PROD/2026-11-05_1802_BLADE_RUNNER_J02_A_A002/rapport.pdf"] } });
         }
       }, 80);
     },
