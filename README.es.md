@@ -28,7 +28,7 @@ Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)**
 
 **Primer arranque.** La aplicación todavía no está firmada, así que tu sistema mostrará un aviso una sola vez:
 - **Windows**: haz clic en «Más información» y después en «Ejecutar de todas formas».
-- **macOS**: haz clic derecho en la aplicación, elige «Abrir» y confirma.
+- **macOS**: haz doble clic en la aplicación y cierra el mensaje de bloqueo. Abre Ajustes del Sistema > Privacidad y seguridad, baja hasta la sección Seguridad y haz clic en «Abrir de todos modos» junto al nombre de la aplicación; confirma con la contraseña de sesión (solo se pide una vez). Si el botón no aparece, abre Terminal y escribe `xattr -dr com.apple.quarantine ` seguido de la aplicación arrastrada a la ventana.
 
 Tu navegador también puede marcar la descarga como inusual o peligrosa: es habitual con una aplicación reciente y sin firmar. Conserva el archivo desde el panel de descargas y, si tienes dudas, analízalo en [VirusTotal](https://www.virustotal.com).
 
@@ -81,6 +81,12 @@ cargo tauri build    # generar los instaladores
 Cada Release publicada genera automáticamente los archivos para Windows y macOS con GitHub Actions.
 
 Estructura del proyecto: `core/` (motor de copia, hash e informes, en Rust), `src-tauri/` (aplicación de escritorio), `ui/` (interfaz, HTML/CSS/JS sin framework).
+
+## Apps hermanas
+
+- [Lugus Transfer](https://github.com/tetsujin28/lugus-transfer): enviar el material de un ordenador a otro con un enlace y un código, verificado al llegar.
+- [Bandua MHL Companion](https://github.com/tetsujin28/bandua-mhl-companion): comprobar el material recibido con su MHL.
+- [Ataecina](https://github.com/tetsujin28/ataecina): recuperar y reparar material perdido.
 
 ## Licencia y aviso
 

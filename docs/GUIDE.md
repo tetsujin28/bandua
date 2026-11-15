@@ -47,7 +47,7 @@ The files are on the [Releases page](https://github.com/tetsujin28/bandua/releas
 The app is not signed yet, so your system shows a warning, only once:
 
 - **Windows**: click "More info", then "Run anyway".
-- **macOS**: right-click the app, choose "Open", then confirm.
+- **macOS**: double-click the app, then close the blocking message. Open System Settings > Privacy & Security, scroll down to the Security section and click "Open Anyway" next to the app's name, then confirm with your session password (asked only once). If the button does not appear, open Terminal and type `xattr -dr com.apple.quarantine ` followed by the app dragged onto the window.
 
 Your browser may also flag the download as unusual. This is common for a new, unsigned app. Keep the file from the downloads panel. If in doubt, have it scanned on [VirusTotal](https://www.virustotal.com).
 

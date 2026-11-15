@@ -28,7 +28,7 @@ Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and
 
 **First launch.** The app is not signed yet, so your system will warn you once:
 - **Windows**: click "More info", then "Run anyway".
-- **macOS**: right-click the app, choose "Open", then confirm.
+- **macOS**: double-click the app, then close the blocking message. Open System Settings > Privacy & Security, scroll down to the Security section and click "Open Anyway" next to the app's name, then confirm with your session password (asked only once). If the button does not appear, open Terminal and type `xattr -dr com.apple.quarantine ` followed by the app dragged onto the window.
 
 Your browser may also flag the download as unusual or dangerous: this is common for new, unsigned apps. Keep the file from the downloads panel, and if in doubt, check it on [VirusTotal](https://www.virustotal.com).
 
@@ -81,6 +81,12 @@ cargo tauri build    # build installers
 Every published Release builds the Windows and macOS files automatically with GitHub Actions.
 
 Project layout: `core/` (copy, hash, reports engine, in Rust), `src-tauri/` (desktop app), `ui/` (interface, plain HTML/CSS/JS).
+
+## Sister apps
+
+- [Lugus Transfer](https://github.com/tetsujin28/lugus-transfer): send footage from one computer to another with a link and a code, verified on arrival.
+- [Bandua MHL Companion](https://github.com/tetsujin28/bandua-mhl-companion): check received footage against its MHL.
+- [Ataecina](https://github.com/tetsujin28/ataecina): recover and repair lost footage.
 
 ## License and disclaimer
 
