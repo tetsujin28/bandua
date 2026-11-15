@@ -28,7 +28,7 @@ Rendez-vous sur la **[page des Releases](https://github.com/tetsujin28/bandua/re
 
 **Premier lancement.** L'application n'est pas encore signée, votre système affichera donc un avertissement une seule fois :
 - **Windows** : cliquez sur « Informations complémentaires », puis « Exécuter quand même ».
-- **macOS** : faites un clic droit sur l'application, choisissez « Ouvrir », puis confirmez.
+- **macOS** : double-cliquez sur l'application, puis fermez le message de blocage. Ouvrez Réglages Système > Confidentialité et sécurité, descendez jusqu'à la section Sécurité et cliquez sur « Ouvrir quand même » à côté du nom de l'application ; confirmez avec le mot de passe de session (demandé une seule fois). Si le bouton n'apparaît pas, ouvrez le Terminal et tapez `xattr -dr com.apple.quarantine ` suivi de l'application glissée dans la fenêtre.
 
 Votre navigateur peut aussi signaler le téléchargement comme inhabituel ou dangereux : c'est fréquent pour une application récente et non signée. Conservez le fichier depuis le panneau des téléchargements et, en cas de doute, faites-le analyser sur [VirusTotal](https://www.virustotal.com).
 
@@ -81,6 +81,12 @@ cargo tauri build    # fabriquer les installeurs
 Chaque Release publiée fabrique automatiquement les fichiers Windows et macOS avec GitHub Actions.
 
 Organisation du projet : `core/` (moteur de copie, hash et rapports, en Rust), `src-tauri/` (application de bureau), `ui/` (interface, HTML/CSS/JS sans framework).
+
+## Apps sœurs
+
+- [Lugus Transfer](https://github.com/tetsujin28/lugus-transfer) : envoyer les rushes d'un ordinateur à l'autre avec un lien et un code, vérifiés à l'arrivée.
+- [Bandua MHL Companion](https://github.com/tetsujin28/bandua-mhl-companion) : contrôler les rushes reçus avec leur MHL.
+- [Ataecina](https://github.com/tetsujin28/ataecina) : récupérer et réparer les rushes perdus.
 
 ## Licence et avertissement
 

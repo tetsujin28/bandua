@@ -47,7 +47,7 @@ Les fichiers se trouvent sur la [page des Releases](https://github.com/tetsujin2
 L'application n'est pas encore signée. Votre système affiche donc un avertissement, une seule fois :
 
 - **Windows** : cliquez sur « Informations complémentaires », puis sur « Exécuter quand même ».
-- **macOS** : faites un clic droit sur l'application, choisissez « Ouvrir », puis confirmez.
+- **macOS** : double-cliquez sur l'application, puis fermez le message de blocage. Ouvrez Réglages Système > Confidentialité et sécurité, descendez jusqu'à la section Sécurité et cliquez sur « Ouvrir quand même » à côté du nom de l'application ; confirmez avec le mot de passe de session (demandé une seule fois). Si le bouton n'apparaît pas, ouvrez le Terminal et tapez `xattr -dr com.apple.quarantine ` suivi de l'application glissée dans la fenêtre.
 
 Il arrive aussi que le navigateur signale le téléchargement comme inhabituel. C'est courant pour une application récente qui n'est pas signée. Gardez le fichier depuis le panneau des téléchargements. En cas de doute, faites-le analyser sur [VirusTotal](https://www.virustotal.com).
 
