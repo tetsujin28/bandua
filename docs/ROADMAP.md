@@ -1,7 +1,7 @@
 # Bandua : où j'en suis et ce qui vient
 
 Mes notes de travail sur Bandua : l'état du projet, mes choix et la suite.
-Dernière mise à jour : 22 novembre 2026 (badge de version et réglages, à publier).
+Dernière mise à jour : 22 novembre 2026 (v0.3.0 publiée : badge de version et réglages).
 
 ## Le projet
 
@@ -13,7 +13,7 @@ C'est l'application sœur d'**Ataecina**, mon outil de récupération et de rép
 
 - Dépôt : https://github.com/tetsujin28/bandua (public)
 - Site : https://tetsujin28.github.io
-- Version publiée : v0.2.0 (pré-version bêta, 8 novembre 2026)
+- Version publiée : v0.3.0 (pré-version bêta, 22 novembre 2026)
 
 ## Feuille de route, par ordre de priorité
 
@@ -84,7 +84,7 @@ ShotPut Pro est bien plus mûr : automatisation, presets, pause, contrôles de l
 
 Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Bandua devienne l'outil gratuit et sérieux des petites équipes, des courts métrages, des indépendants et des étudiants, qui copient encore trop souvent leurs cartes à la main sans aucune vérification.
 
-## Ce qui existe déjà (v0.2.0)
+## Ce qui existe déjà (v0.3.0)
 
 - Copie vers plusieurs destinations en une lecture, vérification par relecture, contrôle de l'espace libre
 - Relecture des copies sans le cache système, carte lue deux fois (option), carte surveillée pendant le déchargement
@@ -100,7 +100,7 @@ Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Ba
 - Licence MIT, avec l'avertissement en anglais, français et espagnol
 - README en anglais, français et espagnol, avec captures dans chaque langue
 - Release GitHub remplie automatiquement à chaque publication
-- À publier : numéro de version en haut à droite, avec « vX.Y.Z disponible » quand GitHub a une version plus récente (une requête au lancement, désactivable), et une fenêtre de Réglages. Même fonction dans Lugus Transfer, Bandua MHL Companion et Ataecina. Pas de mise à jour automatique en un clic.
+- v0.3.0 : numéro de version en haut à droite, avec « vX.Y.Z disponible » quand GitHub a une version plus récente (une requête au lancement, désactivable), et une fenêtre de Réglages. Même fonction dans Lugus Transfer, Bandua MHL Companion et Ataecina. Pas de mise à jour automatique en un clic.
 
 ## Mes choix
 
