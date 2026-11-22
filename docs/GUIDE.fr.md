@@ -71,7 +71,17 @@ Au premier lancement, Bandua affiche un avertissement de non-responsabilité (1)
 8. **Log** : le journal en direct.
 9. **Bouton principal** : **Lancer le déchargement**, puis **Annuler**, puis **Nouveau déchargement** ou **Relancer cette carte**. À sa gauche, un message résume l'état.
 
-En haut, la pastille à côté du nom de l'application indique l'état : *Prêt*, *Copie en cours*, *Vérification*, *Vérifié*, *Erreurs*, *Annulé*. Les boutons **FR / EN / ES** changent la langue de l'interface immédiatement.
+En haut, la pastille à côté du nom de l'application indique l'état : *Prêt*, *Copie en cours*, *Vérification*, *Vérifié*, *Erreurs*, *Annulé*. Les boutons **FR / EN / ES** changent la langue de l'interface immédiatement. À droite se trouvent aussi le numéro de version, la roue dentée des **Réglages** et **À propos** (le bouton *i*).
+
+### Version et réglages
+
+Au lancement, Bandua demande une fois à GitHub si une version plus récente existe (les versions bêta comptent). Si c'est le cas, le numéro de version en haut à droite devient **vX.Y.Z disponible** : un clic ouvre la page de téléchargement. Rien ne s'installe tout seul ; vous téléchargez la nouvelle version quand vous le décidez, de préférence entre deux travaux. Hors ligne, rien ne s'affiche et l'application fonctionne normalement.
+
+<p align="center"><img src="guide/12_update_fr.png" width="520" alt="Une nouvelle version est disponible"></p>
+
+La roue dentée ouvre les **Réglages**. La case **Vérifier les nouvelles versions** (1) est cochée par défaut ; décochez-la pour que l'application ne contacte jamais GitHub. Aucune autre donnée n'est envoyée lors de cette vérification.
+
+<p align="center"><img src="guide/13_settings_fr.png" width="620" alt="Les réglages"></p>
 
 ## 4. Décharger une carte, pas à pas
 
@@ -276,7 +286,7 @@ Oui, le MHL 1.1 avec xxHash64 est le standard que ces logiciels lisent. Il peut 
 Pas pour l'instant. Le code reste compatible, mais la version Linux n'est pas proposée tant qu'elle ne peut pas être testée.
 
 **Bandua envoie-t-il des données sur Internet ?**
-Non. Tout se passe sur votre ordinateur.
+Non. La copie, la vérification et les rapports se font entièrement sur votre ordinateur. La seule connexion est la vérification des nouvelles versions au lancement, une requête à GitHub qui n'envoie rien d'autre ; vous pouvez la désactiver dans les Réglages.
 
 ## 11. Avertissement et licence
 

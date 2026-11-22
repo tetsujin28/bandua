@@ -55,4 +55,6 @@ for L in ["fr","en","es"]:
     make("09_reverify_button","ready",L,[("reverifyBtn",None)],crop=["algo","aboutBtn"],margin=30)
     make("10_reverify_error","reverify_err",L,[("errRow",1),("banner",2)],col=RED)
     make("00_welcome","welcome",L,[("warn",1),("mclose",2)],dimbg=False)
+    make("12_update","update",L,[("verBadge",None,6)],crop=["verBadge","aboutBtn"],margin=24,maxw=900)
+    make("13_settings","settings",L,[("opt",1,8)],crop=["box"],margin=24)
 print("images écrites dans", GUIDE)

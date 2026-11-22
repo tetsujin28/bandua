@@ -71,7 +71,17 @@ On first launch, Bandua shows a disclaimer (1). Read it, then click **I understa
 8. **Log**: the live journal.
 9. **Main button**: **Start offload**, then **Cancel**, then **New offload** or **Retry this card**. A message on its left sums up the current state.
 
-At the top, the badge next to the app name shows the state: *Ready*, *Copying*, *Verifying*, *Verified*, *Errors*, *Cancelled*. The **FR / EN / ES** buttons switch the interface language instantly.
+At the top, the badge next to the app name shows the state: *Ready*, *Copying*, *Verifying*, *Verified*, *Errors*, *Cancelled*. The **FR / EN / ES** buttons switch the interface language instantly. On the right you also find the version number, the **Settings** gear and **About** (the *i* button).
+
+### Version and settings
+
+At startup, Bandua asks GitHub once whether a newer version exists (beta versions count). If so, the version number at the top right turns into **vX.Y.Z available**: one click opens the download page. Nothing installs itself; you download the new version when you decide to, ideally between two jobs. When offline, nothing is shown and the app works as usual.
+
+<p align="center"><img src="guide/12_update_en.png" width="520" alt="A new version is available"></p>
+
+The gear opens the **Settings**. The **Check for new versions** box (1) is ticked by default; untick it so the app never contacts GitHub. No other data is sent during this check.
+
+<p align="center"><img src="guide/13_settings_en.png" width="620" alt="The settings"></p>
 
 ## 4. Offloading a card, step by step
 
@@ -276,7 +286,7 @@ Yes, MHL 1.1 with xxHash64 is the standard these tools read. They can also use t
 Not for now. The code stays compatible, but there is no Linux build until it can be tested.
 
 **Does Bandua send data over the Internet?**
-No. Everything happens on your computer.
+No. Copying, verification and reports happen entirely on your computer. The only connection is the check for new versions at startup, a request to GitHub that sends nothing else; you can turn it off in the Settings.
 
 ## 11. Disclaimer and license
 

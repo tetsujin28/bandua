@@ -49,6 +49,7 @@ function applyLang() {
 function setLang(l) {
   LANG = l; store.set("lang", l); applyLang();
   // ré-afficher ce qui dépend de la langue
+  renderVersion();
   renderSource(); renderDests(); if (S.info || S.tableClips) rebuildClipStates(); else renderClipsPlaceholder();
   if (!S.running && !S.summary) resetDashboard();
   if (S.summary) finishTexts(S.summary);
@@ -204,7 +205,9 @@ const FIELDS = ["project", "day", "camera", "card", "operator", "notes"];
 
 function init() {
   // Version réelle de l'application (Tauri), pour l'affichage dans « À propos »
-  window.__TAURI__?.app?.getVersion?.().then((v) => { VERSION = v; S.modalFn?.(); }).catch(() => {});
+  Promise.resolve(window.__TAURI__?.app?.getVersion?.())
+    .then((v) => { if (v) VERSION = v; S.modalFn?.(); renderVersion(); return checkUpdate(); })
+    .catch(() => checkUpdate());
   applyLang();
   if (api.demo) $("chip").insertAdjacentHTML("afterend", '<span class="demo" data-i18n="demo"></span>');
   FIELDS.forEach((f) => {
@@ -224,12 +227,82 @@ function init() {
   $("reveal").onclick = () => { const d = S.summary?.dest_dirs?.[0] || S.rvReport?.folder; d && api.reveal(d); };
   $("reverifyBtn").onclick = reverify;
   $("aboutBtn").onclick = () => showAbout(false);
+  $("settingsBtn").onclick = showSettings;
+  $("verBadge").onclick = () => (LATEST ? openReleases() : showAbout(false));
   document.querySelectorAll("#lang button").forEach((b) => (b.onclick = () => setLang(b.dataset.l)));
   api.onEvent(onEvent);
   setInterval(updateName, 15000);
   applyLang();
+  renderVersion();
   renderSource(); renderDests(); renderClipsPlaceholder(); resetDashboard(); updateName(); refresh();
   if (!store.get("accepted.v1", false)) showAbout(true);
+}
+
+// ------------------------------------------------------------------ Versions
+
+const RELEASES_API = "https://api.github.com/repos/tetsujin28/bandua/releases?per_page=15";
+const RELEASES_PAGE = "https://github.com/tetsujin28/bandua/releases";
+
+// "v0.3.0" ou "0.3.0-beta" -> [0, 3, 0] ; null si le texte n'est pas un numéro.
+function parseVersion(text) {
+  const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(String(text || "").trim());
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+// > 0 si a est plus récente que b, < 0 si plus ancienne, 0 si égales.
+function compareVersions(a, b) {
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] - b[i];
+  return 0;
+}
+
+let LATEST = null; // version plus récente trouvée sur GitHub, sinon null
+
+// Interroge GitHub une seule fois. Les pré-versions comptent (les bêtas n'en ont
+// pas d'autres), les brouillons non. En cas d'échec (hors ligne, limite GitHub),
+// on ne dit rien.
+async function checkUpdate() {
+  if (!store.get("updateCheck", true)) { LATEST = null; return renderVersion(); }
+  try {
+    const res = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+    if (!res.ok) return;
+    let best = null;
+    for (const r of await res.json()) {
+      if (r.draft) continue;
+      const v = parseVersion(r.tag_name);
+      if (v && (!best || compareVersions(v, best) > 0)) best = v;
+    }
+    const mine = parseVersion(VERSION);
+    LATEST = best && mine && compareVersions(best, mine) > 0 ? best.join(".") : null;
+  } catch { LATEST = null; }
+  renderVersion();
+}
+
+function renderVersion() {
+  const b = document.getElementById("verBadge");
+  if (!b) return;
+  // Fenêtre étroite : seulement le numéro (voir .verbtn .vs dans le CSS).
+  b.innerHTML = LATEST
+    ? `<span class="va">${esc(t("update_badge", { v: LATEST }))}</span><span class="vs">v${esc(LATEST)}</span>`
+    : esc("v" + VERSION);
+  b.title = LATEST ? t("update_title") : t("version_title");
+  b.classList.toggle("new", !!LATEST);
+}
+
+function openReleases() {
+  window.__TAURI__ ? window.__TAURI__.core.invoke("open_release_page", { url: RELEASES_PAGE }).catch(() => {})
+                   : window.open(RELEASES_PAGE, "_blank");
+}
+
+function showSettings() {
+  S.modalFn = showSettings;
+  const on = store.get("updateCheck", true);
+  $("modal").innerHTML = `<div class="modal"><div class="box">
+    <h2>${esc(t("settings"))}</h2>
+    <h4>${esc(t("updates_title"))}</h4>
+    <label class="opt"><input type="checkbox" id="optUpdate"${on ? " checked" : ""}><span>${esc(t("update_check"))}</span></label>
+    <p>${esc(t("update_check_sub"))}</p>
+    <div class="acts"><span></span><button class="sec" id="mclose">${esc(t("close"))}</button></div></div></div>`;
+  $("optUpdate").onchange = () => { store.set("updateCheck", $("optUpdate").checked); checkUpdate(); };
+  $("mclose").onclick = () => { $("modal").innerHTML = ""; S.modalFn = null; };
 }
 
 // ------------------------------------------------------------------ À propos / avertissement

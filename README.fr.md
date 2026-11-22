@@ -32,6 +32,8 @@ Rendez-vous sur la **[page des Releases](https://github.com/tetsujin28/bandua/re
 
 Votre navigateur peut aussi signaler le téléchargement comme inhabituel ou dangereux : c'est fréquent pour une application récente et non signée. Conservez le fichier depuis le panneau des téléchargements et, en cas de doute, faites-le analyser sur [VirusTotal](https://www.virustotal.com).
 
+**Nouvelles versions.** Au lancement, l'application demande une fois à GitHub si une version plus récente existe et, si c'est le cas, l'indique en haut à droite ; un clic ouvre la page de téléchargement. Rien ne s'installe tout seul et aucune autre donnée n'est envoyée. Vous pouvez désactiver cette vérification dans les Réglages (la roue dentée).
+
 ## Ce que fait Bandua
 
 - **Copie en une seule passe** vers 1, 2 destinations ou plus en même temps.

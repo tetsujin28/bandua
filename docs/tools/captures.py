@@ -17,7 +17,7 @@ FIELDS={"fr":dict(project="Blade Runner",day="J03",operator="Domingo Olmo Martin
         "en":dict(project="Blade Runner",day="D03",operator="Domingo Olmo Martin",notes="Slight flare on C004, rain towers on C007"),
         "es":dict(project="Blade Runner",day="D03",operator="Domingo Olmo Martin",notes="Ligero flare en C004, lluvia artificial en C007")}
 SEL={"src":".left > div:nth-child(1)","dests":".left > div:nth-child(2)","ident":".left > div:nth-child(3)","fname":".fname",
- "algo":".algo","reread":".reread","reverifyBtn":"#reverifyBtn","lang":"header #lang","aboutBtn":"#aboutBtn","chip":"#chip",
+ "algo":".algo","reread":".reread","reverifyBtn":"#reverifyBtn","lang":"header #lang","aboutBtn":"#aboutBtn","verBadge":"#verBadge","settingsBtn":"#settingsBtn","opt":".box .opt","box":".box","chip":"#chip",
  "ring":".ring","metrics":".metrics","bars":".bars","cur":"#cur","dash":".dash","clips":"#clipsWrap","log":"#log",
  "go":"#go","footMsg":"#footMsg","openPdf":"#openPdf","reveal":"#reveal","banner":"#banner .banner","mclose":"#mclose",
  "warn":".box .warn","activeRow":"tr.active","errRow":"tr:has(.st.err)","dest1":"#dests .dest:first-child","dest2":"#dests .dest:nth-child(2)",
@@ -39,9 +39,26 @@ async def fresh(b,lang,accepted=True):
     init=f"localStorage.setItem('bandua.lang',JSON.stringify('{lang}'));"
     if accepted: init+="localStorage.setItem('bandua.accepted.v1','true');"
     await page.add_init_script(init)
+    # Recherche de nouvelle version : jamais de vraie requête (hors ligne par défaut).
+    await page.route("https://api.github.com/**", lambda r, *_: r.abort())
     await page.goto(URL)
     await page.add_style_tag(content=".demo{display:none!important}")
     return page
+async def versions_shots(b, lang, fresh, shot, newer="0.3.0"):
+    """Badge « nouvelle version » et fenêtre de réglages, recherche de version simulée."""
+    page = await fresh(b, lang)
+    async def releases(route, *_):
+        await route.fulfill(status=200, content_type="application/json", headers={"access-control-allow-origin": "*"},
+                            body=json.dumps([{"tag_name": "v" + newer, "draft": False}]))
+    await page.unroute("https://api.github.com/**")
+    await page.route("https://api.github.com/**", releases)
+    await page.evaluate("checkUpdate()")
+    await page.clock.run_for(500)
+    await shot(page, f"update_{lang}")
+    await page.click("#settingsBtn"); await page.clock.run_for(300)
+    await shot(page, f"settings_{lang}")
+    await page.context.close()
+
 async def fill(page,lang):
     for k,v in FIELDS[lang].items(): await page.fill("#"+k,v)
 async def prepare(page,lang):
@@ -68,6 +85,7 @@ async def main(lang):
             await page.clock.run_for(80)
             if await page.evaluate("document.querySelector('#banner .banner')!==null"): break
         await page.clock.run_for(300); await shot(page,f"reverify_err_{lang}")
+        await versions_shots(b, lang, fresh, shot)
         await b.close()
 OUT.mkdir(exist_ok=True)
 for l in (sys.argv[1:] or ["fr","en","es"]): asyncio.run(main(l))
