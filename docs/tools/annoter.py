@@ -16,6 +16,7 @@ def frame(d,b,n,col,W,H,s=1.0,pad=8):
     if n:
         r=int(24*s)
         if len(b)>5 and b[5]=="left": cx=max(x0,r+6); cy=(y0+y1)/2
+        elif len(b)>5 and b[5]=="right": cx=min(x1,W-r-6); cy=(y0+y1)/2
         elif (y1-y0)<90*s:
             cx=min(x1-r,W-r-6); cy=y1+r+4
             if cy+r>H: cy=y0-r-4
@@ -56,5 +57,5 @@ for L in ["fr","en","es"]:
     make("10_reverify_error","reverify_err",L,[("errRow",1),("banner",2)],col=RED)
     make("00_welcome","welcome",L,[("warn",1),("mclose",2)],dimbg=False)
     make("12_update","update",L,[("verBadge",None,6)],crop=["verBadge","aboutBtn"],margin=24,maxw=900)
-    make("13_settings","settings",L,[("opt",1,8)],crop=["box"],margin=24)
+    make("13_settings","settings",L,[("opt",1,8,"right")],crop=["box"],margin=24)
 print("images écrites dans", GUIDE)
