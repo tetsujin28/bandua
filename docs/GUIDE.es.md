@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">Bandua, manual de uso</h1>
-<p align="center"><b>Versión 0.2.0 (beta) · Windows y macOS</b></p>
+<p align="center"><b>Versión 0.3.0 (beta) · Windows y macOS</b></p>
 <p align="center">
   <a href="GUIDE.md">English</a> · <a href="GUIDE.fr.md">Français</a> · <b>Español</b>
 </p>

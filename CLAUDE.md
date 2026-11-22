@@ -2,7 +2,7 @@
 
 Application gratuite de déchargement de rushes de Domingo Olmo Martin (Dom), directeur de la photographie. Elle copie une carte caméra vers une ou plusieurs destinations en une seule lecture, vérifie chaque copie par hash en la relisant depuis le disque, et écrit dans chaque dossier daté un rapport PDF, un log, un MHL 1.1 et un JSON.
 
-Windows et macOS (binaire universel). Linux retiré le 8 novembre 2026 faute de pouvoir le tester, mais le code doit rester compatible Linux. Licence MIT. Version publiée : v0.2.0 (pré-version bêta).
+Windows et macOS (binaire universel). Linux retiré le 8 novembre 2026 faute de pouvoir le tester, mais le code doit rester compatible Linux. Licence MIT. Version publiée : v0.3.0 (pré-version bêta).
 
 **Lire `docs/ROADMAP.md`** avant tout travail de fond : état du projet, priorités, choix et pistes écartées.
 
