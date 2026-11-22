@@ -106,6 +106,17 @@ fn open_path(app: AppHandle, path: String) -> Result<(), String> {
     app.opener().open_path(path, None::<&str>).map_err(|e| e.to_string())
 }
 
+/// Ouvre la page des Releases du dépôt dans le navigateur. Seule cette adresse
+/// est acceptée : l'interface ne peut pas faire ouvrir autre chose.
+#[tauri::command]
+fn open_release_page(app: AppHandle, url: String) -> Result<(), String> {
+    const PREFIX: &str = "https://github.com/tetsujin28/bandua/releases";
+    if !url.starts_with(PREFIX) {
+        return Err("adresse refusée".into());
+    }
+    app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn reveal_path(app: AppHandle, path: String) -> Result<(), String> {
     app.opener().reveal_item_in_dir(path).map_err(|e| e.to_string())
@@ -125,6 +136,7 @@ fn main() {
             cancel_offload,
             start_reverify,
             open_path,
+            open_release_page,
             reveal_path
         ])
         .run(tauri::generate_context!())

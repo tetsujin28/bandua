@@ -1,7 +1,7 @@
 # Bandua : où j'en suis et ce qui vient
 
 Mes notes de travail sur Bandua : l'état du projet, mes choix et la suite.
-Dernière mise à jour : 8 novembre 2026 (v0.2.0 publiée).
+Dernière mise à jour : 22 novembre 2026 (badge de version et réglages, à publier).
 
 ## Le projet
 
@@ -100,6 +100,7 @@ Mon objectif n'est pas de remplacer ShotPut sur un long métrage. Je veux que Ba
 - Licence MIT, avec l'avertissement en anglais, français et espagnol
 - README en anglais, français et espagnol, avec captures dans chaque langue
 - Release GitHub remplie automatiquement à chaque publication
+- À publier : numéro de version en haut à droite, avec « vX.Y.Z disponible » quand GitHub a une version plus récente (une requête au lancement, désactivable), et une fenêtre de Réglages. Même fonction dans Lugus Transfer, Bandua MHL Companion et Ataecina. Pas de mise à jour automatique en un clic.
 
 ## Mes choix
 

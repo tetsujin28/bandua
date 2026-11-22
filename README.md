@@ -32,6 +32,8 @@ Go to the **[Releases page](https://github.com/tetsujin28/bandua/releases)** and
 
 Your browser may also flag the download as unusual or dangerous: this is common for new, unsigned apps. Keep the file from the downloads panel, and if in doubt, check it on [VirusTotal](https://www.virustotal.com).
 
+**New versions.** At startup, the app asks GitHub once whether a newer version exists and, if so, shows it at the top right; one click opens the download page. Nothing installs itself, and nothing else is sent. You can turn this check off in the Settings (the gear).
+
 ## What it does
 
 - **Copies in a single pass** to 1, 2 or more destinations at the same time.

@@ -71,7 +71,17 @@ En el primer arranque, Bandua muestra un aviso de exención de responsabilidad (
 8. **Log**: el registro en directo.
 9. **Botón principal**: **Iniciar el volcado**, luego **Cancelar**, luego **Nuevo volcado** o **Reintentar esta tarjeta**. A su izquierda, un mensaje resume el estado.
 
-Arriba, la etiqueta junto al nombre de la app indica el estado: *Listo*, *Copiando*, *Verificando*, *Verificado*, *Errores*, *Cancelado*. Los botones **FR / EN / ES** cambian el idioma de la interfaz al instante.
+Arriba, la etiqueta junto al nombre de la app indica el estado: *Listo*, *Copiando*, *Verificando*, *Verificado*, *Errores*, *Cancelado*. Los botones **FR / EN / ES** cambian el idioma de la interfaz al instante. A la derecha están también el número de versión, la rueda dentada de los **Ajustes** y **Acerca de** (el botón *i*).
+
+### Versión y ajustes
+
+Al iniciar, Bandua pregunta una vez a GitHub si existe una versión más reciente (las versiones beta cuentan). Si es así, el número de versión de arriba a la derecha pasa a **vX.Y.Z disponible**: un clic abre la página de descarga. Nada se instala solo; descargas la nueva versión cuando lo decidas, mejor entre dos trabajos. Sin conexión, no se muestra nada y la aplicación funciona con normalidad.
+
+<p align="center"><img src="guide/12_update_es.png" width="520" alt="Hay una nueva versión disponible"></p>
+
+La rueda dentada abre los **Ajustes**. La casilla **Buscar nuevas versiones** (1) está marcada por defecto; desmárcala para que la aplicación no contacte nunca con GitHub. No se envía ningún otro dato durante esta comprobación.
+
+<p align="center"><img src="guide/13_settings_es.png" width="620" alt="Los ajustes"></p>
 
 ## 4. Volcar una tarjeta, paso a paso
 
@@ -276,7 +286,7 @@ Sí, el MHL 1.1 con xxHash64 es el estándar que leen esos programas. También p
 Por ahora no. El código sigue siendo compatible, pero no hay versión para Linux mientras no se pueda probar.
 
 **¿Bandua envía datos por Internet?**
-No. Todo ocurre en tu ordenador.
+No. La copia, la verificación y los informes se hacen enteramente en tu ordenador. La única conexión es la búsqueda de nuevas versiones al iniciar, una petición a GitHub que no envía nada más; puedes desactivarla en los Ajustes.
 
 ## 11. Aviso y licencia
 

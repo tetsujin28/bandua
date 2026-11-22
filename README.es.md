@@ -32,6 +32,8 @@ Ve a la **[página de Releases](https://github.com/tetsujin28/bandua/releases)**
 
 Tu navegador también puede marcar la descarga como inusual o peligrosa: es habitual con una aplicación reciente y sin firmar. Conserva el archivo desde el panel de descargas y, si tienes dudas, analízalo en [VirusTotal](https://www.virustotal.com).
 
+**Nuevas versiones.** Al iniciar, la aplicación pregunta una vez a GitHub si existe una versión más reciente y, si es así, lo indica arriba a la derecha; un clic abre la página de descarga. Nada se instala solo y no se envía ningún otro dato. Puedes desactivar esta comprobación en los Ajustes (la rueda dentada).
+
 ## Qué hace
 
 - **Copia en una sola pasada** a 1, 2 o más destinos al mismo tiempo.
